@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { useOfferStore } from "./store/offerStore";
+import FilamentScreen from "./FilamentScreen";
 
 export default function App() {
+  const [view, setView] = useState<"offer" | "filaments">("offer");
   const { input, result, addFilament, addDevice, updateField } = useOfferStore();
 
   return (
@@ -12,7 +15,10 @@ export default function App() {
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-xl bg-white/10 backdrop-blur border border-white/20" />
               <h1 className="h1">Offer3D</h1>
-              <span className="ml-auto muted">Futuristic · Glass UI</span>
+              <nav className="ml-auto flex gap-2">
+                <button className="btn" onClick={() => setView("offer")}>Offer</button>
+                <button className="btn" onClick={() => setView("filaments")}>Filaments</button>
+              </nav>
             </div>
           </div>
         </div>
@@ -20,78 +26,84 @@ export default function App() {
 
       {/* Main */}
       <main className="container-pro py-6">
-        {/* Accent aura achter de summary card (decoratief) */}
-<div aria-hidden className="pointer-events-none absolute -z-10 inset-0">
-  <div className="absolute right-10 top-24 h-72 w-72 rounded-full blur-3xl opacity-40
+        {view === "offer" ? (
+          <>
+            {/* Accent aura achter de summary card (decoratief) */}
+            <div aria-hidden className="pointer-events-none absolute -z-10 inset-0">
+              <div className="absolute right-10 top-24 h-72 w-72 rounded-full blur-3xl opacity-40
                   bg-[conic-gradient(from_180deg_at_50%_50%,rgba(99,102,241,.6),rgba(16,185,129,.35),transparent_60%)]" />
-</div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          
-          {/* Left: Inputs */}
-          <section className="glass p-5 sm:p-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="h2">Filament</h2>
-              <button className="btn" onClick={addFilament}>+ Add</button>
             </div>
 
-            <div className="flex items-center justify-between">
-              <h2 className="h2">Devices</h2>
-              <button className="btn" onClick={addDevice}>+ Add</button>
+            <div className="grid gap-6 lg:grid-cols-2">
+
+              {/* Left: Inputs */}
+              <section className="glass p-5 sm:p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="h2">Filament</h2>
+                  <button className="btn" onClick={addFilament}>+ Add</button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <h2 className="h2">Devices</h2>
+                  <button className="btn" onClick={addDevice}>+ Add</button>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="field">
+                    <span className="label">Electricity price €/kWh</span>
+                    <input
+                      className="input"
+                      type="number" step="0.01"
+                      value={input.electricityCostPerKwh}
+                      onChange={e => updateField("electricityCostPerKwh", Number(e.target.value))}
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span className="label">Extra cost €</span>
+                    <input
+                      className="input"
+                      type="number" step="0.01"
+                      value={input.extraCost}
+                      onChange={e => updateField("extraCost", Number(e.target.value))}
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span className="label">VAT rate (0–1)</span>
+                    <input
+                      className="input"
+                      type="number" step="0.01" min={0} max={1}
+                      value={input.vatRate}
+                      onChange={e => updateField("vatRate", Number(e.target.value))}
+                    />
+                  </label>
+                </div>
+              </section>
+
+              {/* Right: Summary */}
+              <aside className="glass p-5 sm:p-6">
+                <h2 className="h2 mb-4">Summary</h2>
+                <dl className="space-y-1">
+                  <div className="stat"><dt className="muted">Material</dt><dd>€ {result.material.toFixed(2)}</dd></div>
+                  <div className="stat"><dt className="muted">Energy</dt><dd>€ {result.energy.toFixed(2)}</dd></div>
+                  <div className="stat"><dt className="muted">Equipment</dt><dd>€ {result.equipment.toFixed(2)}</dd></div>
+                  <div className="stat"><dt className="muted">Extra</dt><dd>€ {result.extra.toFixed(2)}</dd></div>
+                  <div className="stat pt-2 border-t border-white/10"><dt className="muted">Excl. btw</dt><dd>€ {result.net.toFixed(2)}</dd></div>
+                  <div className="stat"><dt className="muted">VAT</dt><dd>€ {result.vat.toFixed(2)}</dd></div>
+                  <div className="stat text-base font-semibold"><dt>Incl. btw</dt><dd>€ {result.total.toFixed(2)}</dd></div>
+                </dl>
+
+                <button className="btn btn-primary w-full mt-5" onClick={() => window.print()}>
+                  Print / Save PDF
+                </button>
+              </aside>
+
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="field">
-                <span className="label">Electricity price €/kWh</span>
-                <input
-                  className="input"
-                  type="number" step="0.01"
-                  value={input.electricityCostPerKwh}
-                  onChange={e => updateField("electricityCostPerKwh", Number(e.target.value))}
-                />
-              </label>
-
-              <label className="field">
-                <span className="label">Extra cost €</span>
-                <input
-                  className="input"
-                  type="number" step="0.01"
-                  value={input.extraCost}
-                  onChange={e => updateField("extraCost", Number(e.target.value))}
-                />
-              </label>
-
-              <label className="field">
-                <span className="label">VAT rate (0–1)</span>
-                <input
-                  className="input"
-                  type="number" step="0.01" min={0} max={1}
-                  value={input.vatRate}
-                  onChange={e => updateField("vatRate", Number(e.target.value))}
-                />
-              </label>
-            </div>
-          </section>
-
-          {/* Right: Summary */}
-          <aside className="glass p-5 sm:p-6">
-            <h2 className="h2 mb-4">Summary</h2>
-            <dl className="space-y-1">
-              <div className="stat"><dt className="muted">Material</dt><dd>€ {result.material.toFixed(2)}</dd></div>
-              <div className="stat"><dt className="muted">Energy</dt><dd>€ {result.energy.toFixed(2)}</dd></div>
-              <div className="stat"><dt className="muted">Equipment</dt><dd>€ {result.equipment.toFixed(2)}</dd></div>
-              <div className="stat"><dt className="muted">Extra</dt><dd>€ {result.extra.toFixed(2)}</dd></div>
-              <div className="stat pt-2 border-t border-white/10"><dt className="muted">Excl. btw</dt><dd>€ {result.net.toFixed(2)}</dd></div>
-              <div className="stat"><dt className="muted">VAT</dt><dd>€ {result.vat.toFixed(2)}</dd></div>
-              <div className="stat text-base font-semibold"><dt>Incl. btw</dt><dd>€ {result.total.toFixed(2)}</dd></div>
-            </dl>
-
-            <button className="btn btn-primary w-full mt-5" onClick={() => window.print()}>
-              Print / Save PDF
-            </button>
-          </aside>
-
-        </div>
+          </>
+        ) : (
+          <FilamentScreen />
+        )}
       </main>
     </div>
   );
