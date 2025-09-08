@@ -1,173 +1,88 @@
-import { useOfferStore } from './store/offerStore'
+import { useOfferStore } from "./store/offerStore";
 
-function App() {
-  const {
-    input,
-    result,
-    updateField,
-    addFilament,
-    updateFilament,
-    removeFilament,
-    addDevice,
-    updateDevice,
-    removeDevice
-  } = useOfferStore()
+export default function App() {
+  const { input, result, addFilament, addDevice, updateField } = useOfferStore();
 
   return (
-    <main className="w-full p-4">
-      <div className="rounded-3xl shadow-2xl max-w-2xl w-full mx-auto p-8 space-y-8 transition-all bg-white/10 backdrop-blur-xl border border-white/20">
-        <h1 className="text-3xl font-light text-center">Offer3D</h1>
+    <div className="min-h-dvh">
+      <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
+        <div className="mx-auto max-w-5xl px-4 py-3">
+          <h1 className="h1">Offer3D</h1>
+        </div>
+      </header>
 
-        <section>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-medium">Filament</h2>
-            <button
-              type="button"
-              className="px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 transition"
-              onClick={addFilament}
-            >
-              + Add
+      <main className="mx-auto max-w-5xl px-4 py-6 grid gap-6 lg:grid-cols-2">
+        {/* Left: inputs */}
+        <section className="card">
+          <div className="card-body space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="section-title">Filament</h2>
+              <button className="btn-ghost" onClick={addFilament}>+ Add</button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <h2 className="section-title">Devices</h2>
+              <button className="btn-ghost" onClick={addDevice}>+ Add</button>
+            </div>
+
+            <div className="space-y-3">
+              <label className="block">
+                <span className="label">Electricity price €/kWh</span>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.01"
+                  value={input.electricityCostPerKwh}
+                  onChange={(e) => updateField("electricityCostPerKwh", Number(e.target.value))}
+                />
+              </label>
+
+              <label className="block">
+                <span className="label">Extra cost €</span>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.01"
+                  value={input.extraCost}
+                  onChange={(e) => updateField("extraCost", Number(e.target.value))}
+                />
+              </label>
+
+              <label className="block">
+                <span className="label">VAT rate (0–1)</span>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.01"
+                  min="0" max="1"
+                  value={input.vatRate}
+                  onChange={(e) => updateField("vatRate", Number(e.target.value))}
+                />
+              </label>
+            </div>
+          </div>
+        </section>
+
+        {/* Right: totals */}
+        <aside className="card">
+          <div className="card-body">
+            <h2 className="section-title mb-4">Summary</h2>
+            <dl className="grid grid-cols-2 gap-y-1 text-sm">
+              <dt>Material</dt><dd className="text-right">€ {result.material.toFixed(2)}</dd>
+              <dt>Energy</dt><dd className="text-right">€ {result.energy.toFixed(2)}</dd>
+              <dt>Equipment</dt><dd className="text-right">€ {result.equipment.toFixed(2)}</dd>
+              <dt>Extra</dt><dd className="text-right">€ {result.extra.toFixed(2)}</dd>
+              <dt className="pt-2 border-t mt-2">Excl. btw</dt><dd className="text-right pt-2 border-t mt-2">€ {result.net.toFixed(2)}</dd>
+              <dt>VAT</dt><dd className="text-right">€ {result.vat.toFixed(2)}</dd>
+              <dt className="font-semibold">Incl. btw</dt><dd className="text-right font-semibold">€ {result.total.toFixed(2)}</dd>
+            </dl>
+
+            <button className="btn w-full mt-4" onClick={() => window.print()}>
+              Print / Save PDF
             </button>
           </div>
-          <div className="space-y-3">
-            {input.filaments.map((f) => (
-              <div key={f.id} className="grid grid-cols-3 gap-2 items-center">
-                <input
-                  type="number"
-                  placeholder="grams"
-                  className="w-full rounded-md bg-white/20 p-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={f.grams}
-                  onChange={(e) =>
-                    updateFilament(f.id, 'grams', Number(e.target.value))
-                  }
-                />
-                <input
-                  type="number"
-                  placeholder="€/kg"
-                  className="w-full rounded-md bg-white/20 p-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={f.costPerKg}
-                  onChange={(e) =>
-                    updateFilament(f.id, 'costPerKg', Number(e.target.value))
-                  }
-                />
-                <button
-                  type="button"
-                  className="text-sm text-red-200 hover:text-red-400"
-                  onClick={() => removeFilament(f.id)}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-medium">Devices</h2>
-            <button
-              type="button"
-              className="px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 transition"
-              onClick={addDevice}
-            >
-              + Add
-            </button>
-          </div>
-          <div className="space-y-3">
-            {input.devices.map((d) => (
-              <div key={d.id} className="grid grid-cols-4 gap-2 items-center">
-                <input
-                  type="text"
-                  placeholder="name"
-                  className="w-full rounded-md bg-white/20 p-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={d.name}
-                  onChange={(e) =>
-                    updateDevice(d.id, 'name', e.target.value)
-                  }
-                />
-                <input
-                  type="number"
-                  placeholder="kWh"
-                  className="w-full rounded-md bg-white/20 p-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={d.electricityKwh}
-                  onChange={(e) =>
-                    updateDevice(d.id, 'electricityKwh', Number(e.target.value))
-                  }
-                />
-                <input
-                  type="number"
-                  placeholder="cost €"
-                  className="w-full rounded-md bg-white/20 p-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={d.cost}
-                  onChange={(e) =>
-                    updateDevice(d.id, 'cost', Number(e.target.value))
-                  }
-                />
-                <button
-                  type="button"
-                  className="text-sm text-red-200 hover:text-red-400"
-                  onClick={() => removeDevice(d.id)}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <label className="block text-sm">
-            <span>Electricity price €/kWh</span>
-            <input
-              type="number"
-              className="mt-1 w-full rounded-md bg-white/20 p-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              value={input.electricityCostPerKwh}
-              onChange={(e) =>
-                updateField('electricityCostPerKwh', Number(e.target.value))
-              }
-            />
-          </label>
-
-          <label className="block text-sm">
-            <span>Extra cost €</span>
-            <input
-              type="number"
-              className="mt-1 w-full rounded-md bg-white/20 p-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              value={input.extraCost}
-              onChange={(e) => updateField('extraCost', Number(e.target.value))}
-            />
-          </label>
-        </section>
-
-        <section className="pt-4 text-sm space-y-1">
-          <div className="flex justify-between">
-            <span>Material</span>
-            <span className="tabular-nums">€ {result.material.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Energy</span>
-            <span className="tabular-nums">€ {result.energy.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Equipment</span>
-            <span className="tabular-nums">€ {result.equipment.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Extra</span>
-            <span className="tabular-nums">€ {result.extra.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between font-medium">
-            <span>Excl. btw</span>
-            <span className="tabular-nums">€ {result.net.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between font-semibold">
-            <span>Incl. btw</span>
-            <span className="tabular-nums">€ {result.total.toFixed(2)}</span>
-          </div>
-        </section>
-      </div>
-    </main>
-  )
+        </aside>
+      </main>
+    </div>
+  );
 }
-
-export default App

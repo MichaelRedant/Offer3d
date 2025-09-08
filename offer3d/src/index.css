@@ -1,28 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* src/index.css */
+@import "tailwindcss";  /* v4 manier – laadt base/components/utilities in één keer */
 
 @layer base {
-  body {
-    font-feature-settings: 'tnum';
-  }
+  body { @apply bg-slate-50 text-slate-900; font-variant-numeric: tabular-nums; }
 }
 
-@layer utilities {
-  @keyframes gradient {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
-  }
-
-  .animate-gradient {
-    background-size: 400% 400%;
-    animation: gradient 15s ease infinite;
-  }
+@layer components {
+  .card { @apply rounded-xl border bg-white shadow-sm; }
+  .card-body { @apply p-4 sm:p-6; }
+  .h1 { @apply text-2xl font-semibold tracking-tight; }
+  .label { @apply text-sm text-slate-600; }
+  .input { @apply w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500/50; }
+  .btn { @apply inline-flex items-center gap-1 rounded-md bg-slate-900 px-3 py-1.5 text-white text-sm hover:bg-black/90 active:scale-[.99]; }
+  .btn-ghost { @apply inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm; }
+  .section-title { @apply text-lg font-semibold; }
 }
