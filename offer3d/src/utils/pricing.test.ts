@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { calculateOffer } from './pricing'
-import { OfferInput } from '../types'
+import type { OfferInput } from '../types'
 
 describe('calculateOffer', () => {
   it('computes totals including vat', () => {

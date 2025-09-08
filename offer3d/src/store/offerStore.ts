@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { OfferInput, OfferResult } from '../types'
+import type { OfferInput, OfferResult } from '../types'
 import { calculateOffer } from '../utils/pricing'
 
 interface OfferState {

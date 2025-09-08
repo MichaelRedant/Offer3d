@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-gradient-to-br from-white to-gray-200 text-gray-800 min-h-screen flex items-center justify-center;
-  font-feature-settings: 'tnum';
+@layer base {
+  body {
+    font-feature-settings: 'tnum';
+  }
 }

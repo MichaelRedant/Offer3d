@@ -1,4 +1,4 @@
-import { OfferInput, OfferResult } from '../types'
+import type { OfferInput, OfferResult } from '../types'
 
 export function calculateOffer(input: OfferInput): OfferResult {
   const material = (input.filamentGrams / 1000) * input.filamentCostPerKg
