@@ -4,84 +4,94 @@ export default function App() {
   const { input, result, addFilament, addDevice, updateField } = useOfferStore();
 
   return (
-    <div className="min-h-dvh">
-      <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
-        <div className="mx-auto max-w-5xl px-4 py-3">
-          <h1 className="h1">Offer3D</h1>
+    <div className="min-h-dvh relative">
+      {/* Topbar */}
+      <header className="sticky top-0 z-20">
+        <div className="container-pro">
+          <div className="mt-4 rounded-2xl glass px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-xl bg-white/10 backdrop-blur border border-white/20" />
+              <h1 className="h1">Offer3D</h1>
+              <span className="ml-auto muted">Futuristic · Glass UI</span>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6 grid gap-6 lg:grid-cols-2">
-        {/* Left: inputs */}
-        <section className="card">
-          <div className="card-body space-y-6">
+      {/* Main */}
+      <main className="container-pro py-6">
+        {/* Accent aura achter de summary card (decoratief) */}
+<div aria-hidden className="pointer-events-none absolute -z-10 inset-0">
+  <div className="absolute right-10 top-24 h-72 w-72 rounded-full blur-3xl opacity-40
+                  bg-[conic-gradient(from_180deg_at_50%_50%,rgba(99,102,241,.6),rgba(16,185,129,.35),transparent_60%)]" />
+</div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          
+          {/* Left: Inputs */}
+          <section className="glass p-5 sm:p-6 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="section-title">Filament</h2>
-              <button className="btn-ghost" onClick={addFilament}>+ Add</button>
+              <h2 className="h2">Filament</h2>
+              <button className="btn" onClick={addFilament}>+ Add</button>
             </div>
 
             <div className="flex items-center justify-between">
-              <h2 className="section-title">Devices</h2>
-              <button className="btn-ghost" onClick={addDevice}>+ Add</button>
+              <h2 className="h2">Devices</h2>
+              <button className="btn" onClick={addDevice}>+ Add</button>
             </div>
 
-            <div className="space-y-3">
-              <label className="block">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="field">
                 <span className="label">Electricity price €/kWh</span>
                 <input
                   className="input"
-                  type="number"
-                  step="0.01"
+                  type="number" step="0.01"
                   value={input.electricityCostPerKwh}
-                  onChange={(e) => updateField("electricityCostPerKwh", Number(e.target.value))}
+                  onChange={e => updateField("electricityCostPerKwh", Number(e.target.value))}
                 />
               </label>
 
-              <label className="block">
+              <label className="field">
                 <span className="label">Extra cost €</span>
                 <input
                   className="input"
-                  type="number"
-                  step="0.01"
+                  type="number" step="0.01"
                   value={input.extraCost}
-                  onChange={(e) => updateField("extraCost", Number(e.target.value))}
+                  onChange={e => updateField("extraCost", Number(e.target.value))}
                 />
               </label>
 
-              <label className="block">
+              <label className="field">
                 <span className="label">VAT rate (0–1)</span>
                 <input
                   className="input"
-                  type="number"
-                  step="0.01"
-                  min="0" max="1"
+                  type="number" step="0.01" min={0} max={1}
                   value={input.vatRate}
-                  onChange={(e) => updateField("vatRate", Number(e.target.value))}
+                  onChange={e => updateField("vatRate", Number(e.target.value))}
                 />
               </label>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Right: totals */}
-        <aside className="card">
-          <div className="card-body">
-            <h2 className="section-title mb-4">Summary</h2>
-            <dl className="grid grid-cols-2 gap-y-1 text-sm">
-              <dt>Material</dt><dd className="text-right">€ {result.material.toFixed(2)}</dd>
-              <dt>Energy</dt><dd className="text-right">€ {result.energy.toFixed(2)}</dd>
-              <dt>Equipment</dt><dd className="text-right">€ {result.equipment.toFixed(2)}</dd>
-              <dt>Extra</dt><dd className="text-right">€ {result.extra.toFixed(2)}</dd>
-              <dt className="pt-2 border-t mt-2">Excl. btw</dt><dd className="text-right pt-2 border-t mt-2">€ {result.net.toFixed(2)}</dd>
-              <dt>VAT</dt><dd className="text-right">€ {result.vat.toFixed(2)}</dd>
-              <dt className="font-semibold">Incl. btw</dt><dd className="text-right font-semibold">€ {result.total.toFixed(2)}</dd>
+          {/* Right: Summary */}
+          <aside className="glass p-5 sm:p-6">
+            <h2 className="h2 mb-4">Summary</h2>
+            <dl className="space-y-1">
+              <div className="stat"><dt className="muted">Material</dt><dd>€ {result.material.toFixed(2)}</dd></div>
+              <div className="stat"><dt className="muted">Energy</dt><dd>€ {result.energy.toFixed(2)}</dd></div>
+              <div className="stat"><dt className="muted">Equipment</dt><dd>€ {result.equipment.toFixed(2)}</dd></div>
+              <div className="stat"><dt className="muted">Extra</dt><dd>€ {result.extra.toFixed(2)}</dd></div>
+              <div className="stat pt-2 border-t border-white/10"><dt className="muted">Excl. btw</dt><dd>€ {result.net.toFixed(2)}</dd></div>
+              <div className="stat"><dt className="muted">VAT</dt><dd>€ {result.vat.toFixed(2)}</dd></div>
+              <div className="stat text-base font-semibold"><dt>Incl. btw</dt><dd>€ {result.total.toFixed(2)}</dd></div>
             </dl>
 
-            <button className="btn w-full mt-4" onClick={() => window.print()}>
+            <button className="btn btn-primary w-full mt-5" onClick={() => window.print()}>
               Print / Save PDF
             </button>
-          </div>
-        </aside>
+          </aside>
+
+        </div>
       </main>
     </div>
   );
