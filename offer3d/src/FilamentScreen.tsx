@@ -1,28 +1,39 @@
 import { useState } from 'react'
 import { useFilamentStore } from './store/filamentStore'
+import { useDeviceStore } from './store/deviceStore'
 import type { Filament } from './types'
+interface FormState extends Omit<Filament, 'id'> {
+  dryerId: string
+}
 
-const emptyForm: Omit<Filament, 'id'> = {
+const emptyForm: FormState = {
   brand: '',
   material: '',
   color: '#ffffff',
   pricePerKg: 0,
-  markupPct: 0
+  markupPct: 0,
+  dryerId: '',
+  dryingTimeHours: 0
 }
 
 export default function FilamentScreen() {
   const { filaments, addFilament, removeFilament } = useFilamentStore()
-  const [form, setForm] = useState(emptyForm)
+  const { devices } = useDeviceStore()
+  const dryers = devices.filter((d) => d.category === 'dryer')
+  const dryerMap = Object.fromEntries(dryers.map((d) => [d.id, d.name]))
+  const [form, setForm] = useState<FormState>(emptyForm)
 
-  function handleChange<K extends keyof Omit<Filament, 'id'>>(
-    key: K,
-    value: Omit<Filament, 'id'>[K]
-  ) {
+  function handleChange<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }))
   }
 
   function handleAdd() {
-    addFilament(form)
+    const { dryerId, dryingTimeHours, ...rest } = form
+    addFilament({
+      ...rest,
+      dryerId: dryerId || undefined,
+      dryingTimeHours: dryerId ? dryingTimeHours : undefined
+    })
     setForm(emptyForm)
   }
 
@@ -80,6 +91,37 @@ export default function FilamentScreen() {
               onChange={(e) => handleChange('markupPct', Number(e.target.value))}
             />
           </label>
+          {dryers.length > 0 && (
+            <label className="field">
+              <span className="label">Dryer</span>
+              <select
+                className="input"
+                value={form.dryerId}
+                onChange={(e) => handleChange('dryerId', e.target.value)}
+              >
+                <option value="">None</option>
+                {dryers.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {form.dryerId && (
+            <label className="field">
+              <span className="label">Drying time (h)</span>
+              <input
+                className="input"
+                type="number"
+                step="0.1"
+                value={form.dryingTimeHours}
+                onChange={(e) =>
+                  handleChange('dryingTimeHours', Number(e.target.value))
+                }
+              />
+            </label>
+          )}
         </div>
         <button className="btn btn-primary" onClick={handleAdd}>
           Save
@@ -103,6 +145,9 @@ export default function FilamentScreen() {
               </div>
               <div className="muted">
                 € {f.pricePerKg.toFixed(2)} / kg · markup {f.markupPct}%
+                {f.dryerId && f.dryingTimeHours
+                  ? ` · dries in ${f.dryingTimeHours}h with ${dryerMap[f.dryerId]}`
+                  : ''}
               </div>
             </div>
             <button className="btn" onClick={() => removeFilament(f.id)}>

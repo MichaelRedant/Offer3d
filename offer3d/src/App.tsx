@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useOfferStore } from "./store/offerStore";
 import FilamentScreen from "./FilamentScreen";
+import DeviceScreen from "./DeviceScreen";
 
 export default function App() {
-  const [view, setView] = useState<"offer" | "filaments">("offer");
+  const [view, setView] = useState<"offer" | "filaments" | "devices">("offer");
   const { input, result, addFilament, addDevice, updateField } = useOfferStore();
 
   return (
@@ -18,6 +19,7 @@ export default function App() {
               <nav className="ml-auto flex gap-2">
                 <button className="btn" onClick={() => setView("offer")}>Offer</button>
                 <button className="btn" onClick={() => setView("filaments")}>Filaments</button>
+                <button className="btn" onClick={() => setView("devices")}>Devices</button>
               </nav>
             </div>
           </div>
@@ -101,8 +103,10 @@ export default function App() {
 
             </div>
           </>
-        ) : (
+        ) : view === "filaments" ? (
           <FilamentScreen />
+        ) : (
+          <DeviceScreen />
         )}
       </main>
     </div>
