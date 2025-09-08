@@ -20,6 +20,15 @@ export interface Filament {
   dryingTimeHours?: number
 }
 
+export interface Filament {
+  id: string
+  brand: string
+  material: string
+  color: string
+  pricePerKg: number
+  markupPct: number
+}
+
 export interface DeviceItem {
   id: string
   name: string
