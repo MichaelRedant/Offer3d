@@ -1,11 +1,27 @@
 import { useState } from "react";
 import { useOfferStore } from "./store/offerStore";
+import { useFilamentStore } from "./store/filamentStore";
+import { useDeviceStore } from "./store/deviceStore";
 import FilamentScreen from "./FilamentScreen";
 import DeviceScreen from "./DeviceScreen";
 
 export default function App() {
   const [view, setView] = useState<"offer" | "filaments" | "devices">("offer");
-  const { input, result, addFilament, addDevice, updateField } = useOfferStore();
+  const {
+    input,
+    result,
+    addFilament,
+    addDevice,
+    updateField,
+    updateFilament,
+    setFilamentPreset,
+    removeFilament,
+    setDevicePreset,
+    setDeviceHours,
+    removeDevice
+  } = useOfferStore();
+  const { filaments } = useFilamentStore();
+  const { devices } = useDeviceStore();
 
   return (
     <div className="min-h-dvh relative">
@@ -40,14 +56,88 @@ export default function App() {
 
               {/* Left: Inputs */}
               <section className="glass p-5 sm:p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="h2">Filament</h2>
-                  <button className="btn" onClick={addFilament}>+ Add</button>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="h2">Filament</h2>
+                    <div className="flex gap-2">
+                      <button className="btn" onClick={addFilament}>+ Add</button>
+                      <button className="btn" onClick={() => setView("filaments")}>Manage</button>
+                    </div>
+                  </div>
+                  {input.filaments.map(f => (
+                    <div key={f.id} className="grid gap-2 sm:grid-cols-[1fr,auto,auto] items-end">
+                      <label className="field">
+                        <span className="label">Type</span>
+                        <select
+                          className="input"
+                          value={f.filamentId ?? ""}
+                          onChange={e => {
+                            const fil = filaments.find(fl => fl.id === e.target.value)
+                            const dryer = fil?.dryerId ? devices.find(d => d.id === fil.dryerId) : undefined
+                            if (fil) setFilamentPreset(f.id, fil, dryer)
+                          }}
+                        >
+                          <option value="">Select...</option>
+                          {filaments.map(fl => (
+                            <option key={fl.id} value={fl.id}>{fl.brand} {fl.material}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        <span className="label">Grams</span>
+                        <input
+                          className="input"
+                          type="number" step="0.1"
+                          value={f.grams}
+                          onChange={e => updateFilament(f.id, 'grams', Number(e.target.value))}
+                        />
+                      </label>
+                      <button className="btn" onClick={() => removeFilament(f.id)}>Remove</button>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <h2 className="h2">Devices</h2>
-                  <button className="btn" onClick={addDevice}>+ Add</button>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="h2">Devices</h2>
+                    <div className="flex gap-2">
+                      <button className="btn" onClick={addDevice}>+ Add</button>
+                      <button className="btn" onClick={() => setView("devices")}>Manage</button>
+                    </div>
+                  </div>
+                  {input.devices.map(d => (
+                    <div key={d.id} className="grid gap-2 sm:grid-cols-[1fr,auto,auto] items-end">
+                      <label className="field">
+                        <span className="label">Device</span>
+                        <select
+                          className="input"
+                          value={d.deviceId ?? ""}
+                          onChange={e => {
+                            const dev = devices.find(dd => dd.id === e.target.value)
+                            if (dev) setDevicePreset(d.id, dev)
+                          }}
+                        >
+                          <option value="">Select...</option>
+                          {devices.map(dev => (
+                            <option key={dev.id} value={dev.id}>{dev.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        <span className="label">Hours</span>
+                        <input
+                          className="input"
+                          type="number" step="0.1"
+                          value={d.hours}
+                          onChange={e => {
+                            const dev = devices.find(dd => dd.id === d.deviceId)
+                            setDeviceHours(d.id, Number(e.target.value), dev)
+                          }}
+                        />
+                      </label>
+                      <button className="btn" onClick={() => removeDevice(d.id)}>Remove</button>
+                    </div>
+                  ))}
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -72,6 +162,16 @@ export default function App() {
                   </label>
 
                   <label className="field">
+                    <span className="label">Profit margin %</span>
+                    <input
+                      className="input"
+                      type="number" step="0.01"
+                      value={input.profitMarginPct}
+                      onChange={e => updateField("profitMarginPct", Number(e.target.value))}
+                    />
+                  </label>
+
+                  <label className="field">
                     <span className="label">VAT rate (0–1)</span>
                     <input
                       className="input"
@@ -91,6 +191,7 @@ export default function App() {
                   <div className="stat"><dt className="muted">Energy</dt><dd>€ {result.energy.toFixed(2)}</dd></div>
                   <div className="stat"><dt className="muted">Equipment</dt><dd>€ {result.equipment.toFixed(2)}</dd></div>
                   <div className="stat"><dt className="muted">Extra</dt><dd>€ {result.extra.toFixed(2)}</dd></div>
+                  <div className="stat"><dt className="muted">Profit</dt><dd>€ {result.profit.toFixed(2)}</dd></div>
                   <div className="stat pt-2 border-t border-white/10"><dt className="muted">Excl. btw</dt><dd>€ {result.net.toFixed(2)}</dd></div>
                   <div className="stat"><dt className="muted">VAT</dt><dd>€ {result.vat.toFixed(2)}</dd></div>
                   <div className="stat text-base font-semibold"><dt>Incl. btw</dt><dd>€ {result.total.toFixed(2)}</dd></div>
