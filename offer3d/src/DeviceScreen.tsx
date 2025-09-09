@@ -6,7 +6,8 @@ const emptyForm: Omit<Device, 'id'> = {
   name: '',
   category: 'printer',
   kwhPerHour: 0,
-  costPerHour: 0
+  costPerHour: 0,
+  purchasePrice: 0
 }
 
 export default function DeviceScreen() {
@@ -26,7 +27,7 @@ export default function DeviceScreen() {
     <div className="space-y-6">
       <div className="glass p-5 sm:p-6 space-y-4">
         <h2 className="h2">Add Device</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <label className="field">
             <span className="label">Name</span>
             <input
@@ -70,6 +71,17 @@ export default function DeviceScreen() {
               onChange={(e) => handleChange('costPerHour', Number(e.target.value))}
             />
           </label>
+
+          <label className="field">
+            <span className="label">Purchase price €</span>
+            <input
+              className="input"
+              type="number"
+              step="0.01"
+              value={form.purchasePrice}
+              onChange={(e) => handleChange('purchasePrice', Number(e.target.value))}
+            />
+          </label>
         </div>
         <button className="btn btn-primary" onClick={handleAdd}>
           Save
@@ -84,7 +96,7 @@ export default function DeviceScreen() {
                 {d.name} ({d.category})
               </div>
               <div className="muted">
-                {d.kwhPerHour} kWh/h · € {d.costPerHour}/h
+                {d.kwhPerHour} kWh/h · € {d.costPerHour}/h · € {d.purchasePrice}
               </div>
             </div>
             <button className="btn" onClick={() => removeDevice(d.id)}>

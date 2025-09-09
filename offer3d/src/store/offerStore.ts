@@ -112,7 +112,9 @@ export const useOfferStore = create<OfferState>((set) => ({
             name: '',
             hours: 0,
             electricityKwh: 0,
-            cost: 0
+            cost: 0,
+            purchasePrice: 0,
+            purchasePct: 0
           }
         ]
       }
@@ -136,7 +138,9 @@ export const useOfferStore = create<OfferState>((set) => ({
               name: device.name,
               hours: 0,
               electricityKwh: 0,
-              cost: 0
+              cost: 0,
+              purchasePrice: device.purchasePrice ?? 0,
+              purchasePct: 0
             }
           : d
       )

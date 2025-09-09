@@ -26,8 +26,12 @@ export function calculateOffer(input: OfferInput): OfferResult {
   const extra = input.extraCost
   const base = material + energy + equipment + extra
   const profit = base * (input.profitMarginPct / 100)
-  const net = base + profit
+  const purchase = input.devices.reduce(
+    (sum, d) => sum + d.purchasePrice * (d.purchasePct / 100),
+    0
+  )
+  const net = base + profit + purchase
   const vat = net * input.vatRate
   const total = net + vat
-  return { material, energy, equipment, extra, profit, net, vat, total }
+  return { material, energy, equipment, extra, profit, purchase, net, vat, total }
 }

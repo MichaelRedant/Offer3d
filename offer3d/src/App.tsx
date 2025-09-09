@@ -18,6 +18,7 @@ export default function App() {
     removeFilament,
     setDevicePreset,
     setDeviceHours,
+    updateDevice,
     removeDevice
   } = useOfferStore();
   const { filaments } = useFilamentStore();
@@ -106,7 +107,7 @@ export default function App() {
                     </div>
                   </div>
                   {input.devices.map(d => (
-                    <div key={d.id} className="grid gap-2 sm:grid-cols-[1fr,auto,auto] items-end">
+                    <div key={d.id} className="grid gap-2 sm:grid-cols-[1fr,auto,auto,auto] items-end">
                       <label className="field">
                         <span className="label">Device</span>
                         <select
@@ -133,6 +134,15 @@ export default function App() {
                             const dev = devices.find(dd => dd.id === d.deviceId)
                             setDeviceHours(d.id, Number(e.target.value), dev)
                           }}
+                        />
+                      </label>
+                      <label className="field">
+                        <span className="label">Purchase %</span>
+                        <input
+                          className="input"
+                          type="number" step="0.01"
+                          value={d.purchasePct}
+                          onChange={e => updateDevice(d.id, 'purchasePct', Number(e.target.value))}
                         />
                       </label>
                       <button className="btn" onClick={() => removeDevice(d.id)}>Remove</button>
@@ -192,6 +202,7 @@ export default function App() {
                   <div className="stat"><dt className="muted">Equipment</dt><dd>€ {result.equipment.toFixed(2)}</dd></div>
                   <div className="stat"><dt className="muted">Extra</dt><dd>€ {result.extra.toFixed(2)}</dd></div>
                   <div className="stat"><dt className="muted">Profit</dt><dd>€ {result.profit.toFixed(2)}</dd></div>
+                  <div className="stat"><dt className="muted">Purchase</dt><dd>€ {result.purchase.toFixed(2)}</dd></div>
                   <div className="stat pt-2 border-t border-white/10"><dt className="muted">Excl. btw</dt><dd>€ {result.net.toFixed(2)}</dd></div>
                   <div className="stat"><dt className="muted">VAT</dt><dd>€ {result.vat.toFixed(2)}</dd></div>
                   <div className="stat text-base font-semibold"><dt>Incl. btw</dt><dd>€ {result.total.toFixed(2)}</dd></div>

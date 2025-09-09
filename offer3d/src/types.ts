@@ -28,6 +28,8 @@ export interface DeviceItem {
   hours: number
   electricityKwh: number
   cost: number
+  purchasePrice: number
+  purchasePct: number
 }
 
 export interface Device {
@@ -36,6 +38,7 @@ export interface Device {
   category: DeviceCategory
   kwhPerHour: number
   costPerHour: number
+  purchasePrice: number
 }
 
 export interface OfferInput {
@@ -52,6 +55,7 @@ export interface OfferResult {
   energy: number
   equipment: number
   extra: number
+  purchase: number
   profit: number
   net: number
   vat: number
