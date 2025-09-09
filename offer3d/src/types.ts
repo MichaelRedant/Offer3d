@@ -1,5 +1,6 @@
 export interface FilamentItem {
   id: string
+  filamentId?: string
   grams: number
   costPerKg: number
   dryingHours?: number
@@ -20,18 +21,11 @@ export interface Filament {
   dryingTimeHours?: number
 }
 
-export interface Filament {
-  id: string
-  brand: string
-  material: string
-  color: string
-  pricePerKg: number
-  markupPct: number
-}
-
 export interface DeviceItem {
   id: string
+  deviceId?: string
   name: string
+  hours: number
   electricityKwh: number
   cost: number
 }
@@ -49,6 +43,7 @@ export interface OfferInput {
   devices: DeviceItem[]
   electricityCostPerKwh: number
   extraCost: number
+  profitMarginPct: number
   vatRate: number
 }
 
@@ -57,6 +52,7 @@ export interface OfferResult {
   energy: number
   equipment: number
   extra: number
+  profit: number
   net: number
   vat: number
   total: number

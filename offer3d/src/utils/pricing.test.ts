@@ -21,6 +21,7 @@ describe('calculateOffer', () => {
       ],
       electricityCostPerKwh: 0.5,
       extraCost: 10,
+      profitMarginPct: 10,
       vatRate: 0.21
     }
 
@@ -28,8 +29,9 @@ describe('calculateOffer', () => {
     expect(result.material).toBeCloseTo(3.5)
     expect(result.energy).toBeCloseTo(2.5)
     expect(result.equipment).toBeCloseTo(3)
-    expect(result.net).toBeCloseTo(19)
-    expect(result.vat).toBeCloseTo(3.99)
-    expect(result.total).toBeCloseTo(22.99)
+    expect(result.profit).toBeCloseTo(1.9)
+    expect(result.net).toBeCloseTo(20.9)
+    expect(result.vat).toBeCloseTo(4.389)
+    expect(result.total).toBeCloseTo(25.289)
   })
 })
