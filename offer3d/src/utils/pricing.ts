@@ -23,8 +23,9 @@ export function calculateOffer(input: OfferInput): OfferResult {
         sum + (f.dryingHours ?? 0) * (f.dryerCostPerHour ?? 0),
       0
     )
+  const services = input.services.reduce((sum, s) => sum + s.cost, 0)
   const extra = input.extraCost
-  const base = material + energy + equipment + extra
+  const base = material + energy + equipment + services + extra
   const profit = base * (input.profitMarginPct / 100)
   const purchase = input.devices.reduce(
     (sum, d) => sum + d.purchasePrice * (d.purchasePct / 100),
@@ -33,5 +34,16 @@ export function calculateOffer(input: OfferInput): OfferResult {
   const net = base + profit + purchase
   const vat = net * input.vatRate
   const total = net + vat
-  return { material, energy, equipment, extra, profit, purchase, net, vat, total }
+  return {
+    material,
+    energy,
+    equipment,
+    services,
+    extra,
+    profit,
+    purchase,
+    net,
+    vat,
+    total
+  }
 }

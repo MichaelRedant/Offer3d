@@ -5,7 +5,9 @@ import type {
   FilamentItem,
   DeviceItem,
   Filament,
-  Device
+  Device,
+  ServiceItem,
+  Service
 } from '../types'
 import { calculateOffer } from '../utils/pricing'
 import { fetchElectricityPrice as fetchEliaPrice } from '../utils/electricity'
@@ -13,7 +15,7 @@ import { fetchElectricityPrice as fetchEliaPrice } from '../utils/electricity'
 interface OfferState {
   input: OfferInput
   result: OfferResult
-  updateField: <K extends keyof Omit<OfferInput, 'filaments' | 'devices'>>(
+  updateField: <K extends keyof Omit<OfferInput, 'filaments' | 'devices' | 'services'>>(
     key: K,
     value: OfferInput[K]
   ) => void
@@ -34,12 +36,22 @@ interface OfferState {
   setDevicePreset: (id: string, device: Device) => void
   setDeviceHours: (id: string, hours: number, device?: Device) => void
   removeDevice: (id: string) => void
+  addService: () => void
+  updateService: <K extends keyof ServiceItem>(
+    id: string,
+    key: K,
+    value: ServiceItem[K]
+  ) => void
+  setServicePreset: (id: string, service: Service) => void
+  setServiceHours: (id: string, hours: number) => void
+  removeService: (id: string) => void
   fetchElectricityPrice: () => Promise<void>
 }
 
 const initialInput: OfferInput = {
   filaments: [],
   devices: [],
+  services: [],
   electricityCostPerKwh: 0,
   extraCost: 0,
   profitMarginPct: 0,
@@ -168,6 +180,67 @@ export const useOfferStore = create<OfferState>((set) => ({
     set((state) => {
       const devices = state.input.devices.filter((d) => d.id !== id)
       const input = { ...state.input, devices }
+      return { input, result: calculateOffer(input) }
+    }),
+  addService: () =>
+    set((state) => {
+      const input = {
+        ...state.input,
+        services: [
+          ...state.input.services,
+          {
+            id: Math.random().toString(36).slice(2),
+            serviceId: undefined,
+            name: '',
+            billing: 'hourly',
+            hours: 0,
+            rate: 0,
+            cost: 0
+          }
+        ]
+      }
+      return { input, result: calculateOffer(input) }
+    }),
+  updateService: (id, key, value) =>
+    set((state) => {
+      const services = state.input.services.map((s) =>
+        s.id === id ? { ...s, [key]: value } : s
+      )
+      const input = { ...state.input, services }
+      return { input, result: calculateOffer(input) }
+    }),
+  setServicePreset: (id, service) =>
+    set((state) => {
+      const services = state.input.services.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              serviceId: service.id,
+              name: service.name,
+              billing: service.billing,
+              rate: service.rate,
+              hours: 0,
+              cost: service.billing === 'fixed' ? service.rate : 0
+            }
+          : s
+      )
+      const input = { ...state.input, services }
+      return { input, result: calculateOffer(input) }
+    }),
+  setServiceHours: (id, hours) =>
+    set((state) => {
+      const services = state.input.services.map((s) =>
+        s.id === id
+          ? { ...s, hours, cost: s.rate * hours }
+          : s
+      )
+      const input = { ...state.input, services }
+      return { input, result: calculateOffer(input) }
+    }),
+  removeService: (id) =>
+    set((state) => {
+      const services = state.input.services.filter((s) => s.id !== id)
+      const input = { ...state.input, services }
       return { input, result: calculateOffer(input) }
     }),
   fetchElectricityPrice: async () => {

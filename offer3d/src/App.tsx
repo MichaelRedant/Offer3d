@@ -2,16 +2,21 @@ import { useState } from "react";
 import { useOfferStore } from "./store/offerStore";
 import { useFilamentStore } from "./store/filamentStore";
 import { useDeviceStore } from "./store/deviceStore";
+import { useServiceStore } from "./store/serviceStore";
 import FilamentScreen from "./FilamentScreen";
 import DeviceScreen from "./DeviceScreen";
+import ServiceScreen from "./ServiceScreen";
 
 export default function App() {
-  const [view, setView] = useState<"offer" | "filaments" | "devices">("offer");
+  const [view, setView] = useState<
+    "offer" | "filaments" | "devices" | "services"
+  >("offer");
   const {
     input,
     result,
     addFilament,
     addDevice,
+    addService,
     updateField,
     updateFilament,
     setFilamentPreset,
@@ -20,10 +25,14 @@ export default function App() {
     setDeviceHours,
     updateDevice,
     removeDevice,
+    setServicePreset,
+    setServiceHours,
+    removeService,
     fetchElectricityPrice
   } = useOfferStore();
   const { filaments } = useFilamentStore();
   const { devices } = useDeviceStore();
+  const { services } = useServiceStore();
 
   return (
     <div className="min-h-dvh relative">
@@ -38,6 +47,7 @@ export default function App() {
                 <button className="btn" onClick={() => setView("offer")}>Offer</button>
                 <button className="btn" onClick={() => setView("filaments")}>Filaments</button>
                 <button className="btn" onClick={() => setView("devices")}>Devices</button>
+                <button className="btn" onClick={() => setView("services")}>Services</button>
               </nav>
             </div>
           </div>
@@ -151,6 +161,56 @@ export default function App() {
                   ))}
                 </div>
 
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="h2">Services</h2>
+                    <div className="flex gap-2">
+                      <button className="btn" onClick={addService}>+ Add</button>
+                      <button className="btn" onClick={() => setView("services")}>Manage</button>
+                    </div>
+                  </div>
+                  {input.services.map(s => (
+                    <div
+                      key={s.id}
+                      className={
+                        "grid gap-2 items-end " +
+                        (s.billing === 'hourly'
+                          ? 'sm:grid-cols-[1fr,auto,auto]'
+                          : 'sm:grid-cols-[1fr,auto]')
+                      }
+                    >
+                      <label className="field">
+                        <span className="label">Service</span>
+                        <select
+                          className="input"
+                          value={s.serviceId ?? ""}
+                          onChange={e => {
+                            const serv = services.find(ss => ss.id === e.target.value)
+                            if (serv) setServicePreset(s.id, serv)
+                          }}
+                        >
+                          <option value="">Select...</option>
+                          {services.map(serv => (
+                            <option key={serv.id} value={serv.id}>{serv.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                      {s.billing === 'hourly' && (
+                        <label className="field">
+                          <span className="label">Hours</span>
+                          <input
+                            className="input"
+                            type="number" step="0.1"
+                            value={s.hours}
+                            onChange={e => setServiceHours(s.id, Number(e.target.value))}
+                          />
+                        </label>
+                      )}
+                      <button className="btn" onClick={() => removeService(s.id)}>Remove</button>
+                    </div>
+                  ))}
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="field">
                     <span className="label">Electricity price €/kWh</span>
@@ -210,6 +270,7 @@ export default function App() {
                   <div className="stat"><dt className="muted">Material</dt><dd>€ {result.material.toFixed(2)}</dd></div>
                   <div className="stat"><dt className="muted">Energy</dt><dd>€ {result.energy.toFixed(2)}</dd></div>
                   <div className="stat"><dt className="muted">Equipment</dt><dd>€ {result.equipment.toFixed(2)}</dd></div>
+                  <div className="stat"><dt className="muted">Services</dt><dd>€ {result.services.toFixed(2)}</dd></div>
                   <div className="stat"><dt className="muted">Extra</dt><dd>€ {result.extra.toFixed(2)}</dd></div>
                   <div className="stat"><dt className="muted">Profit</dt><dd>€ {result.profit.toFixed(2)}</dd></div>
                   <div className="stat"><dt className="muted">Purchase</dt><dd>€ {result.purchase.toFixed(2)}</dd></div>
@@ -227,8 +288,10 @@ export default function App() {
           </>
         ) : view === "filaments" ? (
           <FilamentScreen />
-        ) : (
+        ) : view === "devices" ? (
           <DeviceScreen />
+        ) : (
+          <ServiceScreen />
         )}
       </main>
     </div>

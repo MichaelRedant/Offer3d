@@ -26,6 +26,7 @@ describe('calculateOffer', () => {
           purchasePct: 10
         }
       ],
+      services: [],
       electricityCostPerKwh: 0.5,
       extraCost: 10,
       profitMarginPct: 10,
