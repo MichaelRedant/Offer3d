@@ -52,7 +52,7 @@ Kenmerken
 
 💾 Zustand + persist: state bewaard in localStorage (offline‑first).
 
-🎛️ Instelbaar: valuta, btw‑tarief, elektriciteitsprijs, printers, filamenten, drogers.
+🎛️ Instelbaar: valuta, btw‑tarief, printers, filamenten, drogers. Elektriciteitsprijs kan automatisch via Elia Open Data opgehaald of handmatig ingegeven worden.
 
 ➕ Lijnitems: per item materiaalkost, energie, machine, nabewerking, markup.
 

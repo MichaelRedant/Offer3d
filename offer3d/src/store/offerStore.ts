@@ -8,6 +8,7 @@ import type {
   Device
 } from '../types'
 import { calculateOffer } from '../utils/pricing'
+import { fetchElectricityPrice as fetchEliaPrice } from '../utils/electricity'
 
 interface OfferState {
   input: OfferInput
@@ -33,6 +34,7 @@ interface OfferState {
   setDevicePreset: (id: string, device: Device) => void
   setDeviceHours: (id: string, hours: number, device?: Device) => void
   removeDevice: (id: string) => void
+  fetchElectricityPrice: () => Promise<void>
 }
 
 const initialInput: OfferInput = {
@@ -167,5 +169,12 @@ export const useOfferStore = create<OfferState>((set) => ({
       const devices = state.input.devices.filter((d) => d.id !== id)
       const input = { ...state.input, devices }
       return { input, result: calculateOffer(input) }
+    }),
+  fetchElectricityPrice: async () => {
+    const price = await fetchEliaPrice()
+    set((state) => {
+      const input = { ...state.input, electricityCostPerKwh: price }
+      return { input, result: calculateOffer(input) }
     })
+  }
 }))

@@ -19,7 +19,8 @@ export default function App() {
     setDevicePreset,
     setDeviceHours,
     updateDevice,
-    removeDevice
+    removeDevice,
+    fetchElectricityPrice
   } = useOfferStore();
   const { filaments } = useFilamentStore();
   const { devices } = useDeviceStore();
@@ -153,12 +154,21 @@ export default function App() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="field">
                     <span className="label">Electricity price €/kWh</span>
-                    <input
-                      className="input"
-                      type="number" step="0.01"
-                      value={input.electricityCostPerKwh}
-                      onChange={e => updateField("electricityCostPerKwh", Number(e.target.value))}
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        className="input flex-1"
+                        type="number" step="0.01"
+                        value={input.electricityCostPerKwh}
+                        onChange={e => updateField("electricityCostPerKwh", Number(e.target.value))}
+                      />
+                      <button
+                        className="btn"
+                        type="button"
+                        onClick={() => void fetchElectricityPrice()}
+                      >
+                        Fetch
+                      </button>
+                    </div>
                   </label>
 
                   <label className="field">
