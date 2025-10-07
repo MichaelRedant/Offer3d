@@ -1,0 +1,497 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --terminal-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+    --terminal-glow: rgba(244, 184, 96, 0.25);
+  }
+
+  body {
+    @apply bg-background text-ink font-sans antialiased;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 15% 22%, rgba(248, 196, 106, 0.1), transparent 65%),
+      radial-gradient(circle at 82% 0%, rgba(120, 180, 178, 0.08), transparent 55%),
+      linear-gradient(transparent 96%, rgba(0, 0, 0, 0.4) 100%),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 480px 520px, 420px 460px, 100% 3px, 3px 100%;
+    background-blend-mode: screen;
+    text-shadow: 0 0 1px rgba(253, 244, 219, 0.4);
+    animation: crtFadeIn 0.8s var(--terminal-ease) both;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-semibold tracking-dial text-ink;
+  }
+
+  h1 {
+    @apply text-4xl uppercase;
+  }
+
+  h2 {
+    @apply text-2xl uppercase text-ink-muted;
+  }
+
+  h3 {
+    @apply text-xl uppercase text-ink-muted;
+  }
+
+  a {
+    @apply text-primary transition-colors duration-150;
+  }
+
+  a:hover {
+    @apply text-primary/80;
+  }
+
+  ::selection {
+    @apply bg-primary text-background;
+  }
+
+  hr {
+    @apply border-gridline/60;
+  }
+
+  .bg-white {
+    @apply bg-parchment/95 text-base-soft;
+  }
+
+  .bg-gray-50 {
+    @apply bg-parchment-light/80;
+  }
+
+  .border-gray-100 {
+    @apply border-gridline/30;
+  }
+
+  .border-gray-200 {
+    @apply border-gridline/40;
+  }
+
+  .border-gray-300 {
+    @apply border-gridline/60;
+  }
+
+  .text-gray-800 {
+    @apply text-base-soft;
+  }
+
+  .text-gray-700 {
+    @apply text-gridline;
+  }
+
+  .text-gray-600 {
+    @apply text-gridline;
+  }
+
+  .text-gray-500 {
+    @apply text-gridline/90;
+  }
+
+  .text-blue-700 {
+    @apply text-primary;
+  }
+
+  .text-blue-600 {
+    @apply text-primary;
+  }
+
+  .text-blue-800 {
+    @apply text-primary;
+  }
+
+  .hover\:text-blue-800:hover {
+    @apply text-primary/80;
+  }
+
+  .text-pink-600 {
+    @apply text-accent;
+  }
+
+  .text-green-700 {
+    @apply text-signal-green;
+  }
+
+  .text-red-600 {
+    @apply text-signal-red;
+  }
+
+  .bg-blue-600,
+  .hover\:bg-blue-600:hover {
+    @apply bg-primary text-background;
+  }
+
+  .hover\:bg-blue-700:hover {
+    @apply bg-primary/80;
+  }
+
+  .bg-green-600,
+  .hover\:bg-green-600:hover {
+    @apply bg-signal-green text-background;
+  }
+
+  .hover\:bg-green-700:hover {
+    @apply bg-signal-green/80;
+  }
+
+  .bg-red-600,
+  .hover\:bg-red-600:hover {
+    @apply bg-signal-red text-background;
+  }
+
+  .hover\:bg-red-700:hover {
+    @apply bg-signal-red/80;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid rgba(244, 184, 96, 0.8);
+    outline-offset: 4px;
+  }
+}
+
+@keyframes crtFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+    filter: blur(2px);
+  }
+  60% {
+    opacity: 0.92;
+    transform: translateY(0);
+    filter: blur(0.6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes terminalScanline {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes terminalPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--terminal-glow);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(244, 184, 96, 0.45);
+  }
+}
+
+@layer utilities {
+  .crt-fade-in {
+    animation: crtFadeIn 0.7s var(--terminal-ease) both;
+  }
+
+  .crt-scan {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .crt-scan::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: -120%;
+    height: 60%;
+    background: linear-gradient(180deg, rgba(244, 184, 96, 0) 0%, rgba(244, 184, 96, 0.12) 50%, rgba(244, 184, 96, 0) 100%);
+    animation: terminalScanline 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+}
+
+@layer components {
+  .terminal-shell {
+    @apply relative min-h-screen text-ink bg-transparent overflow-hidden;
+  }
+
+  .terminal-topbar {
+    @apply sticky top-0 z-20 mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-6 text-xs uppercase;
+    backdrop-filter: blur(14px);
+    background: linear-gradient(90deg, rgba(27, 26, 23, 0.95), rgba(19, 18, 16, 0.82));
+    border: 1px solid rgba(45, 40, 31, 0.75);
+    border-radius: 18px;
+    box-shadow: 0 22px 44px rgba(6, 6, 6, 0.55), 0 0 12px rgba(248, 196, 106, 0.2);
+  }
+
+  .terminal-topbar__brand {
+    @apply flex items-center gap-3 tracking-[0.2em] text-gridline/80;
+  }
+
+  .terminal-topbar__led {
+    @apply inline-block h-2.5 w-2.5 rounded-full bg-primary shadow-terminal-glow;
+    animation: terminalPulse 3.2s ease-in-out infinite;
+  }
+
+  .terminal-topbar__label {
+    @apply font-semibold text-ink;
+  }
+
+  .terminal-topbar__path {
+    @apply hidden text-gridline/60 sm:inline-block;
+  }
+
+  .terminal-topbar__nav {
+    @apply flex items-center gap-3;
+  }
+
+  .terminal-topbar__link {
+    @apply terminal-button is-ghost text-[0.65rem] px-4 py-1.5 border-gridline/60 transition-none;
+    transform: none;
+  }
+
+  .terminal-topbar__link.is-active {
+    @apply border-primary text-background bg-primary;
+  }
+
+  .terminal-topbar__link:hover,
+  .terminal-topbar__link:active {
+    transform: none;
+  }
+
+  .terminal-page {
+    @apply relative z-10 max-w-6xl mx-auto px-6 pb-16 pt-6 space-y-10;
+  }
+
+  .terminal-card {
+    @apply relative bg-parchment-light/90 border border-gridline/60 shadow-terminal rounded-card p-6 text-base-soft;
+    transition: transform 0.4s var(--terminal-ease), box-shadow 0.4s var(--terminal-ease);
+    animation: crtFadeIn 0.6s var(--terminal-ease) both;
+  }
+
+  .terminal-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+  }
+
+  .terminal-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgba(45, 40, 31, 0.5);
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .terminal-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45), 0 0 25px rgba(244, 184, 96, 0.15);
+  }
+
+  .terminal-section-title {
+    @apply text-xs uppercase tracking-wide text-ink-muted;
+  }
+
+  .terminal-label {
+    @apply text-xs font-medium uppercase tracking-widest text-base-soft;
+  }
+
+  .terminal-input {
+    @apply w-full bg-parchment-light/80 border border-gridline/50 text-base-soft px-4 py-2.5 rounded-md shadow-terminal-inset focus:outline-none focus:ring-2 focus:ring-primary/70 focus:border-primary/60 placeholder:text-gridline/80;
+    transition: border-color 0.25s var(--terminal-ease), box-shadow 0.25s var(--terminal-ease), background-color 0.25s var(--terminal-ease);
+  }
+
+  .terminal-checkbox {
+    @apply accent-primary bg-parchment-light border border-gridline/60 rounded-sm;
+  }
+
+  .terminal-button {
+    @apply inline-flex items-center gap-2 px-5 py-2 border-2 border-gridline bg-parchment-deep text-background font-semibold uppercase tracking-[0.12em] shadow-terminal transition-all duration-200 ease-out cursor-pointer;
+  }
+
+  .terminal-button:hover {
+    @apply -translate-y-px shadow-terminal-glow;
+  }
+
+  .terminal-button:active {
+    @apply translate-y-px shadow-terminal-inset;
+  }
+
+  .terminal-button.is-accent {
+    @apply bg-primary border-primary text-background;
+  }
+
+  .terminal-button.is-ghost {
+    @apply bg-base-highlight text-ink border-gridline/70;
+  }
+
+  .terminal-back-button {
+    @apply gap-3 text-xs tracking-[0.2em];
+  }
+
+  .terminal-back-button__indicator {
+    @apply inline-block text-primary;
+    letter-spacing: 0.3em;
+  }
+
+  .terminal-back-button:hover .terminal-back-button__indicator {
+    animation: terminalPulse 1.2s ease-in-out infinite;
+  }
+
+  .terminal-button.is-danger {
+    @apply bg-signal-red border-signal-red text-background;
+  }
+
+  .terminal-list {
+    @apply divide-y divide-gridline/35 border border-gridline/60 rounded-card bg-parchment/80 shadow-terminal;
+  }
+
+  .terminal-list > li {
+    transition: background-color 0.25s var(--terminal-ease), transform 0.25s var(--terminal-ease);
+  }
+
+  .terminal-list > li:hover {
+    background-color: rgba(44, 42, 39, 0.28);
+    transform: translateY(-1px);
+  }
+
+  .terminal-modal {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-base-soft/70 backdrop-blur-md;
+  }
+
+  .terminal-modal__panel {
+    @apply terminal-card w-full max-w-lg;
+    animation: crtFadeIn 0.45s var(--terminal-ease) both;
+  }
+
+  .terminal-pill {
+    @apply inline-flex items-center px-3 py-1 bg-parchment-light/70 border border-gridline/50 rounded-pill text-xs uppercase tracking-wide text-base-soft;
+  }
+
+  .terminal-grid {
+    @apply grid gap-4 md:grid-cols-2;
+  }
+
+  .terminal-divider {
+    @apply h-px w-full bg-gridline/50;
+  }
+
+  .terminal-note {
+    @apply text-xs text-ink-muted uppercase tracking-wide;
+  }
+
+  .retro-display {
+    @apply relative overflow-hidden rounded-card border border-gridline/60 bg-base-soft/70 shadow-terminal p-6;
+  }
+
+  .retro-display__header {
+    @apply flex items-center justify-between text-xs uppercase tracking-[0.16em] text-gridline/70;
+    margin-bottom: 0.75rem;
+  }
+
+  .retro-display__cursor {
+    display: inline-block;
+    width: 0.6rem;
+    height: 0.6rem;
+    background: rgba(248, 196, 106, 0.9);
+    box-shadow: 0 0 10px rgba(248, 196, 106, 0.6);
+    animation: retroBlink 1.2s steps(2, start) infinite;
+  }
+
+  .retro-display__svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .retro-display__grid line {
+    stroke: rgba(120, 180, 178, 0.12);
+    stroke-width: 1;
+  }
+
+  .retro-display__wave {
+    fill: none;
+    stroke: rgba(248, 196, 106, 0.85);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 12 18;
+    animation: retroWave 6s linear infinite;
+  }
+
+  .retro-display__wave--secondary {
+    stroke: rgba(120, 180, 178, 0.6);
+    animation: retroWaveAlt 8s linear infinite;
+  }
+}
+
+.input {
+  @apply terminal-input;
+}
+
+input[type="checkbox"] {
+  @apply terminal-checkbox;
+}
+
+button {
+  @apply font-sans;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@keyframes retroWave {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -180;
+  }
+}
+
+@keyframes retroWaveAlt {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -240;
+  }
+}
+
+@keyframes retroBlink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.15;
+  }
+}

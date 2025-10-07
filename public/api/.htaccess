@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteBase /offr3d/api/
+
+# Laat bestanden bestaan
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Laat POST toe zonder dat hij verandert naar GET
+RewriteRule ^(.+\.php)$ $1 [QSA,L]
