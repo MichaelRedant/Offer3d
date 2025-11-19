@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useToast } from "../../context/ToastContext";
+import { baseUrl } from "../../lib/constants";
 
 const EMPTY_FORM = {
   merk: "",
@@ -12,6 +14,7 @@ export default function DryerManager() {
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchDryers();
@@ -20,12 +23,15 @@ export default function DryerManager() {
   async function fetchDryers() {
     try {
       setLoading(true);
-      const response = await fetch("/api/get-dryers.php");
+      const response = await fetch(`${baseUrl}/get-dryers.php`);
       const data = await response.json();
       setDryers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Fout bij ophalen droogkasten:", error);
-      alert("Drogers konden niet geladen worden.");
+      showToast({
+        type: "error",
+        message: "Drogers konden niet geladen worden.",
+      });
     } finally {
       setLoading(false);
     }
@@ -60,7 +66,7 @@ export default function DryerManager() {
     }
 
     try {
-      const response = await fetch("/api/save-dryer.php", {
+      const response = await fetch(`${baseUrl}/save-dryer.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -73,9 +79,16 @@ export default function DryerManager() {
 
       await fetchDryers();
       resetForm();
+      showToast({
+        type: "success",
+        message: editId ? "Droger bijgewerkt." : "Droger toegevoegd.",
+      });
     } catch (error) {
       console.error("Fout bij opslaan droger:", error);
-      alert(error.message);
+      showToast({
+        type: "error",
+        message: error.message,
+      });
     } finally {
       setSaving(false);
     }
@@ -85,7 +98,7 @@ export default function DryerManager() {
     if (!confirm("Ben je zeker dat je deze droger wilt verwijderen?")) return;
 
     try {
-      const response = await fetch("/api/delete-dryer.php", {
+      const response = await fetch(`${baseUrl}/delete-dryer.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
@@ -101,9 +114,16 @@ export default function DryerManager() {
       if (editId === id) {
         resetForm();
       }
+      showToast({
+        type: "success",
+        message: "Droger verwijderd.",
+      });
     } catch (error) {
       console.error("Fout bij verwijderen droger:", error);
-      alert(error.message);
+      showToast({
+        type: "error",
+        message: error.message,
+      });
     }
   };
 

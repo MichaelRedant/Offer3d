@@ -113,7 +113,7 @@ export default function MaterialManager() {
 
   async function fetchManufacturers() {
     try {
-      const response = await fetch("/api/get-manufacturers.php", { cache: "no-store" });
+      const response = await fetch(`${baseUrl}/get-manufacturers.php`, { cache: "no-store" });
       if (!response.ok) {
         throw new Error("Fout bij ophalen fabrikanten");
       }
@@ -228,7 +228,7 @@ export default function MaterialManager() {
     setSavingManufacturer(true);
 
     try {
-      const response = await fetch("/api/add-manufacturer.php", {
+      const response = await fetch(`${baseUrl}/add-manufacturer.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(manufacturerForm),

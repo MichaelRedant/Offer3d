@@ -10,9 +10,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 require_once __DIR__ . '/db.php';
 
-
-header('Content-Type: application/json');
-
 $data = json_decode(file_get_contents("php://input"), true);
 
 if (
@@ -24,20 +21,17 @@ if (
 }
 
 try {
-    $stmt = $conn->prepare("
+    $stmt = $pdo->prepare("
         UPDATE manufacturers 
-        SET naam = ?, land = ?, website = ? 
-        WHERE id = ?
+        SET naam = :naam, land = :land, website = :website 
+        WHERE id = :id
     ");
-    $stmt->bind_param(
-        "sssi",
-        $data['naam'],
-        $data['land'],
-        $data['website'],
-        $data['id']
-    );
-
-    $stmt->execute();
+    $stmt->execute([
+        ':naam' => $data['naam'],
+        ':land' => $data['land'] ?? null,
+        ':website' => $data['website'] ?? null,
+        ':id' => (int) $data['id'],
+    ]);
 
     echo json_encode(['success' => true]);
 } catch (Exception $e) {

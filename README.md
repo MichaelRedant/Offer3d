@@ -1,7 +1,7 @@
-# Offr3D – Neo-Retro Offerte Console
+# Offr3d – Neo-Retro Offerte Console
 
-Offr3D is een webapplicatie waarmee je offertes voor 3D‑printopdrachten kunt samenstellen, beheren en analyseren.  
-De UI is geïnspireerd op 1980s computerterminals: Monospace typografie, matte beige & charcoal kleuren, minimalistische grids en subtiele CRT‑effecten.
+Offr3d is de XinuDesign-offerteconsole voor 3D-printopdrachten.  
+De UI is geïnspireerd op 1980’s computerterminals: monospace typografie, matte beige & charcoal kleuren, minimalistische grids en subtiele CRT-effecten.
 
 ---
 
@@ -9,11 +9,12 @@ De UI is geïnspireerd op 1980s computerterminals: Monospace typografie, matte b
 
 1. [Technische stack](#technische-stack)  
 2. [Projectstructuur](#projectstructuur)  
-3. [Installatie & scripts](#installatie--scripts)  
-4. [Belangrijkste UI‑modules](#belangrijkste-ui-modules)  
-5. [API-overzicht](#api-overzicht)  
-6. [Stylingrichtlijnen](#stylingrichtlijnen)  
-7. [Notities voor toekomstige ontwikkeling](#notities-voor-toekomstige-ontwikkeling)
+3. [Hosting & domein](#hosting--domein)  
+4. [Installatie & scripts](#installatie--scripts)  
+5. [Belangrijkste UI-modules](#belangrijkste-ui-modules)  
+6. [API-overzicht](#api-overzicht)  
+7. [Stylingrichtlijnen](#stylingrichtlijnen)  
+8. [Notities voor toekomstige ontwikkeling](#notities-voor-toekomstige-ontwikkeling)
 
 ---
 
@@ -32,35 +33,44 @@ De UI is geïnspireerd op 1980s computerterminals: Monospace typografie, matte b
 ```
 offr3d/
 ├── public/
-│   └── api/          # PHP endpoints (get/save quotes, settings, materials, …)
+│   ├── api/          # PHP endpoints (quotes, settings, materials, …)
+│   └── sitemap.xml   # Sitemap voor zoekmachines
 ├── src/
-│   ├── components/   # Reusable UI (TerminalBackButton, forms, modals)
-│   ├── pages/        # Views (Home, NewQuote, QuotesPage, Settings, …)
-│   ├── context/      # Global context providers (SettingsContext)
+│   ├── components/   # UI (TerminalBackButton, forms, modals, …)
+│   ├── pages/        # Views (Home, NewQuote, Quotes, Settings, …)
+│   ├── context/      # Global providers (SettingsContext, ToastContext)
 │   ├── lib/          # Businesslogica (calculateItemCost, calculateQuoteCost, …)
-│   ├── styles/       # Extra CSS indien nodig
-│   └── index.css     # Tailwind layers + custom utility styles
-├── README.md         # Dit document
-├── .agents           # Snelle referentie voor toekomstige agents
+│   └── styles/       # Tailwind layers + custom utilities
+├── README.md
+├── .AGENTS.md
 ├── package.json
 └── vite.config.js
 ```
 
 ---
 
+## Hosting & domein
+
+- Productie-URL: `https://xinudesign.be/offr3d`  
+- HTTPS is verplicht en wordt via `.htaccess` geforceerd (inclusief canonical redirect naar `xinudesign.be`).  
+- De sitemap staat in `public/sitemap.xml` en wordt automatisch meegebundeld.  
+- De front-end draait als een Vite SPA; API-verzoeken gaan naar `public/api/*.php`.
+
+---
+
 ## Installatie & scripts
 
 ```bash
-# 1. Dependencies installeren
+# Dependencies installeren
 npm install
 
-# 2. Development server starten
+# Development server starten
 npm run dev
 
-# 3. Productiebouw maken
+# Productiebouw maken
 npm run build
 
-# 4. Build previewen
+# Build previewen
 npm run preview
 ```
 
@@ -72,12 +82,12 @@ Pas indien nodig de databasecredenties aan via `public/api/env.php`.
 ## Belangrijkste UI-modules
 
 ### Dashboard (`src/pages/Home.jsx`)
-- Hero met call-to-actions en contextuele tekst  
-- Quick actions: directe links naar kernflows  
-- Animated status panel (`AnimatedDisplay`)  
-- Metrics & stats (offertes, doorlooptijd, materials)  
-- Recent quotes, taakbord en resource dock  
-- Diagnostische log met retro-statusfeed
+- Hero met CTA’s (nieuwe offerte, overzicht) en live status  
+- Metrics die echte data tonen (offertes, materialen, klanten, winstmarge)  
+- Quick-navigation grid voor de belangrijkste modules  
+- Laatste offertes (op basis van `/api/get-quotes.php`)  
+- Systeemchecklist om settings/klanten/materialen te valideren  
+- Resource grid met ondersteunende schermen
 
 ### Offerteflow
 - `NewQuotePage.jsx`: ondersteunt zowel nieuwe als bestaande offertes (`?edit=:id`).  
@@ -91,7 +101,8 @@ Pas indien nodig de databasecredenties aan via `public/api/env.php`.
 ### Configuratie
 - `SettingsPage.jsx`: instellingen voor marges, tarieven en fiscaliteit.  
 - `MaterialManager.jsx`: beheer van materialen inclusief stats, filters en fabrikantmodal.  
-- `ManufacturerManager.jsx`, `ClientManager.jsx`: beheer van gekoppelde entiteiten.
+- `ManufacturerManager.jsx`, `ClientManager.jsx`: gekoppelde entiteiten.  
+- `ModelleringssoftwareManager.jsx`, `DryerManager.jsx`: administratie van tools en licenties.
 
 ---
 
@@ -102,35 +113,31 @@ Alle endpoints bevinden zich in `public/api`. Belangrijkste routes:
 | Endpoint | Doel |
 |----------|------|
 | `get-settings.php` / `update-settings.php` | Ophalen en opslaan van globale instellingen |
-| `get-quotes.php` / `get-quote-detail.php` | Lijsten & detailoffertes |
+| `get-quotes.php` / `get-quote-detail.php` | Lijst & detail van offertes |
 | `save-quote.php` / `update-quote.php` / `delete-quote.php` | CRUD-acties op offertes |
 | `get-materials.php` / `save-material.php` / `update-material.php` / `delete-material.php` | Materiaalbeheer |
-| `get-manufacturers.php`, `add-manufacturer.php`, enz. | Fabrikantbeheer |
-| `get-clients.php`, `save-client.php`, enz. | Klantbeheer |
+| `get-manufacturers.php`, `add-manufacturer.php`, … | Fabrikantbeheer |
+| `get-clients.php`, `save-client.php`, … | Klantbeheer |
 
 De endpoints verwachten JSON-requests en retourneren JSON-responses.  
-De `SettingsContext` pakt automatisch fallback-waarden op wanneer er nog geen instellingen zijn opgeslagen.
+`SettingsContext` pakt automatisch fallback-waarden op wanneer er nog geen instellingen zijn opgeslagen.
 
 ---
 
 ## Stylingrichtlijnen
 
-- **Theme**: kleuren en schaduwen uitbreiden via `tailwind.config.js` → gebruik `primary`, `accent`, `background`, `parchment`, `ink`, `gridline`, `signal.*`.  
-- **Component classes**: herbruik de `terminal-*` utility classes uit `src/index.css` (bijv. `terminal-card`, `terminal-button`, `terminal-note`).  
-- **Typografie**: `IBM Plex Mono` als basis; gebruik uppercase + tracking voor headings (`tracking-dial`).  
-- **Interactie**: subtiele bewegingen (`hover:-translate-y-1`, `shadow-terminal-glow`) en geen zware animaties.  
-- **Responsiveness**: grid layouts tweaken met Tailwind breakpoints; grote panels (dashboard) zijn mobile-first opgezet.
+- **Theme**: gebruik tokens uit `tailwind.config.js` (`primary`, `accent`, `parchment`, `ink`, `gridline`, `signal.*`).  
+- **Component classes**: herbruik `terminal-*` utilities uit `src/index.css` (bijv. `terminal-card`, `terminal-button`, `terminal-note`).  
+- **Typografie**: `IBM Plex Mono` als basis; headings met uppercase + tracking (`tracking-dial`).  
+- **Interactie**: subtiele bewegingen (`hover:-translate-y-1`, `shadow-terminal-glow`) en zachte animaties.  
+- **Responsiveness**: grid layouts mobile-first; pas breakpoints aan indien een kaart te breed oogt.
 
 ---
 
 ## Notities voor toekomstige ontwikkeling
 
-- **Data integratie**: vervang placeholder/statistische data (recent quotes, taakbord) door echte API-calls zodra beschikbaar.  
-- **Error handling**: toevoegen van toasts of modals i.p.v. `alert()` in offerte- en settingsflows.  
-- **Testing**: voorlopig geen geautomatiseerde tests; overweeg React Testing Library voor kritische flows.  
-- **Accessibility**: SVG’s hebben reeds `title/desc`; let bij nieuwe components op ARIA-labels en focus states.  
+- **Monitoring**: overweeg health-endpoints zodat het dashboard API-status kan tonen.  
+- **Testing**: geen geautomatiseerde tests aanwezig; React Testing Library is een logische volgende stap.  
+- **Accessibility**: let bij nieuwe componenten op ARIA-labels en focus states.  
 - **Deployment**: build output (`dist/`) statisch hosten; PHP API vereist server met PHP + MySQL.  
-- **Agent workflows**: zie `.agents` voor snelle commandoreferences en high-level acties.
-
-Veel succes met het verder uitbouwen van Offr3D!  
-Heb je aanvullende vragen of wil je nieuwe modules introduceren, gebruik dan de structurele richtlijnen hierboven als kapstok.
+- **Agent workflows**: zie `.AGENTS.md` voor quick reference.

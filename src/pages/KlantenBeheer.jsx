@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import TerminalBackButton from "../components/TerminalBackButton";
 import { baseUrl } from "../../lib/constants";
+import { useToast } from "../context/ToastContext";
 
 const EMPTY_FORM = {
   id: null,
@@ -17,6 +18,7 @@ export default function KlantenBeheer() {
   const [clients, setClients] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isEditing, setIsEditing] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     async function fetchClients() {
@@ -51,7 +53,10 @@ export default function KlantenBeheer() {
       const result = await response.json();
 
       if (!result.success) {
-        alert("Opslaan van de klant is mislukt.");
+        showToast({
+          type: "error",
+          message: "Opslaan van de klant is mislukt.",
+        });
         return;
       }
 
@@ -67,7 +72,10 @@ export default function KlantenBeheer() {
       setIsEditing(false);
     } catch (error) {
       console.error("Fout bij opslaan klant:", error);
-      alert("Serverfout bij het opslaan van de klant.");
+      showToast({
+        type: "error",
+        message: "Serverfout bij het opslaan van de klant.",
+      });
     }
   };
 
@@ -89,8 +97,15 @@ export default function KlantenBeheer() {
       const result = await response.json();
       if (result.success) {
         setClients((prev) => prev.filter((client) => client.id !== id));
+        showToast({
+          type: "success",
+          message: "Klant verwijderd.",
+        });
       } else {
-        alert("Verwijderen van de klant is mislukt.");
+        showToast({
+          type: "error",
+          message: "Verwijderen van de klant is mislukt.",
+        });
       }
     } catch (error) {
       console.error("Fout bij verwijderen klant:", error);

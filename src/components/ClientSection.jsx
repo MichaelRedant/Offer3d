@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import useQuoteForm from "../hooks/useQuoteForm";
+import { baseUrl } from "../lib/constants";
 
 export default function ClientSection() {
   const [clients, setClients] = useState([]);
@@ -7,7 +8,7 @@ export default function ClientSection() {
   const { updateClient } = useQuoteForm();
 
   useEffect(() => {
-    fetch("/offr3d/api/get-clients.php")
+    fetch(`${baseUrl}/get-clients.php`)
       .then((response) => response.json())
       .then((data) => setClients(data))
       .catch(() => setClients([]));

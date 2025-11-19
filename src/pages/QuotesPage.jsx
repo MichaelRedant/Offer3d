@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import TerminalBackButton from "../components/TerminalBackButton";
+import { baseUrl } from "../lib/constants";
 
 const dateFormatter = new Intl.DateTimeFormat("nl-BE", {
   year: "numeric",
@@ -25,7 +26,7 @@ export default function QuotesPage() {
   useEffect(() => {
     async function fetchQuotes() {
       try {
-        const response = await fetch("/api/get-quotes.php", { cache: "no-store" });
+        const response = await fetch(`${baseUrl}/get-quotes.php`, { cache: "no-store" });
         if (!response.ok) {
           throw new Error("Netwerkfout");
         }
@@ -68,7 +69,7 @@ export default function QuotesPage() {
     try {
       setDeletingId(quote.id);
       setStatus(null);
-      const response = await fetch("/api/delete-quote.php", {
+      const response = await fetch(`${baseUrl}/delete-quote.php`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -6,8 +6,11 @@ import PrintItemList from "../components/PrintItemList";
 import SummarySection from "../components/SummarySection";
 import calculateQuoteCost from "../lib/calculateQuoteCost";
 import { SettingsContext } from "../context/SettingsContext";
+import { useToast } from "../context/ToastContext";
 import ClientSelector from "../components/ClientSelector";
 import TerminalBackButton from "../components/TerminalBackButton";
+import ClientAddModal from "../components/ClientAddModal";
+import { baseUrl } from "../lib/constants";
 
 const INITIAL_ITEM = {
   name: "",
@@ -44,6 +47,7 @@ const DEFAULT_FORM = {
 
 export default function NewQuotePage() {
   const { settings } = useContext(SettingsContext);
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editingQuoteId = searchParams.get("edit");
@@ -55,6 +59,8 @@ export default function NewQuotePage() {
   const [summary, setSummary] = useState(null);
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [quoteLoaded, setQuoteLoaded] = useState(false);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [clientRefreshKey, setClientRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!settings) return;
@@ -82,7 +88,7 @@ export default function NewQuotePage() {
     async function loadQuote() {
       try {
         setLoadingQuote(true);
-        const response = await fetch(`/api/get-quote-detail.php?id=${editingQuoteId}`, {
+        const response = await fetch(`${baseUrl}/get-quote-detail.php?id=${editingQuoteId}`, {
           cache: "no-store",
         });
         if (!response.ok) {
@@ -166,7 +172,10 @@ export default function NewQuotePage() {
         setQuoteLoaded(true);
       } catch (error) {
         console.error("Fout bij laden offerte:", error);
-        alert(error.message || "Offerte kon niet worden geladen.");
+        showToast({
+          type: "error",
+          message: error.message || "Offerte kon niet worden geladen.",
+        });
         navigate("/offertes");
       } finally {
         setLoadingQuote(false);
@@ -207,12 +216,25 @@ export default function NewQuotePage() {
 
   const handleSaveQuote = async () => {
     if (!selectedClient) {
-      alert("Selecteer eerst een klant.");
+      showToast({ type: "warning", message: "Selecteer eerst een klant." });
       return;
     }
 
     if (!summary) {
-      alert("Kan offerte niet opslaan zonder berekende samenvatting.");
+      showToast({
+        type: "error",
+        message: "Kan offerte niet opslaan zonder berekende samenvatting.",
+      });
+      return;
+    }
+
+    const validationErrors = validateQuoteBeforeSave({ items, summary, form });
+    if (validationErrors.length > 0) {
+      showToast({
+        type: "error",
+        message: `Kan offerte niet opslaan:\n- ${validationErrors.join("\n- ")}`,
+        duration: 6000,
+      });
       return;
     }
 
@@ -227,6 +249,7 @@ export default function NewQuotePage() {
         items: payloadItems,
         settings,
         navigate,
+        showToast,
       });
       return;
     }
@@ -234,12 +257,12 @@ export default function NewQuotePage() {
     const payload = {
       client_id: selectedClient.id,
       form,
-      items,
+      items: payloadItems,
       summary,
     };
 
     try {
-      const res = await fetch("/api/save-quote.php", {
+      const res = await fetch(`${baseUrl}/save-quote.php`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -250,14 +273,20 @@ export default function NewQuotePage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        alert("Offerte succesvol opgeslagen!");
+        showToast({
+          type: "success",
+          message: "Offerte succesvol opgeslagen.",
+        });
         navigate(`/offertes/${data.quote_id ?? ""}`);
       } else {
         throw new Error(data.error || "Onbekende fout bij opslaan.");
       }
     } catch (error) {
       console.error("Fout bij opslaan offerte:", error);
-      alert("Fout bij opslaan van offerte: " + error.message);
+      showToast({
+        type: "error",
+        message: `Fout bij opslaan van offerte: ${error.message}`,
+      });
     }
   };
 
@@ -265,6 +294,17 @@ export default function NewQuotePage() {
   const headerSubtitle = isEditing
     ? "Pas de offerte aan en sla de wijzigingen op."
     : "Stel parameters in, voeg printitems toe en bekijk direct de kosten.";
+
+  const handleClientCreated = (client) => {
+    if (client?.id) {
+      setSelectedClient(client);
+    }
+    setClientRefreshKey((prev) => prev + 1);
+    showToast({
+      type: "success",
+      message: `Klant ${client?.naam ?? ""} toegevoegd.`,
+    });
+  };
 
   return (
     <main className="space-y-8">
@@ -293,17 +333,27 @@ export default function NewQuotePage() {
                   Selecteer klant
                 </h2>
               </div>
-              <Link
-                to="/instellingen/klanten"
-                className="terminal-button is-ghost text-xs tracking-[0.14em]"
-              >
-                Nieuwe klant
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="terminal-button is-accent text-xs tracking-[0.14em]"
+                  onClick={() => setIsClientModalOpen(true)}
+                >
+                  Nieuwe klant
+                </button>
+                <Link
+                  to="/instellingen/klanten"
+                  className="terminal-button is-ghost text-xs tracking-[0.14em]"
+                >
+                  Klanten beheren
+                </Link>
+              </div>
             </div>
 
             <ClientSelector
               selectedClient={selectedClient}
               setSelectedClient={setSelectedClient}
+              refreshKey={clientRefreshKey}
             />
 
             {selectedClient ? (
@@ -347,6 +397,11 @@ export default function NewQuotePage() {
           )}
         </>
       )}
+      <ClientAddModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        onSave={handleClientCreated}
+      />
     </main>
   );
 }
@@ -388,8 +443,51 @@ function prepareItemsForPayload(items, summary) {
   });
 }
 
-async function updateExistingQuote({ id, clientId, form, summary, items, settings, navigate }) {
+function validateQuoteBeforeSave({ items, summary, form }) {
+  const errors = [];
+
+  if (!form?.offertedatum) {
+    errors.push("Offertedatum ontbreekt.");
+  }
+
+  if (!Array.isArray(items) || items.length === 0) {
+    errors.push("Voeg minstens \u00e9\u00e9n printstuk toe.");
+    return errors;
+  }
+
+  items.forEach((item, index) => {
+    const label = `Printstuk ${String(index + 1).padStart(2, "0")}`;
+    const weight = Number(item.weight ?? 0);
+    const seconds =
+      Number(item.hours ?? 0) * 3600 +
+      Number(item.minutes ?? 0) * 60 +
+      Number(item.seconds ?? 0);
+
+    if (!item.materiaal_id) {
+      errors.push(`${label}: selecteer een materiaal.`);
+    }
+
+    if (!weight || weight <= 0) {
+      errors.push(`${label}: gewicht moet groter dan 0 gram zijn.`);
+    }
+
+    if (!seconds || seconds <= 0) {
+      errors.push(`${label}: vul de printtijd in (uren/minuten/seconden).`);
+    }
+  });
+
+  const faultyItems =
+    summary?.itemResultaten?.filter((entry) => entry?.kost?.fout) ?? [];
+  if (faultyItems.length > 0) {
+    errors.push("Lossen eerst de fouten in de kostencalculatie op.");
+  }
+
+  return errors;
+}
+
+async function updateExistingQuote({ id, clientId, form, summary, items, settings, navigate, showToast }) {
   const totals = summary?.totals ?? {};
+  const notify = typeof showToast === "function" ? showToast : () => {};
 
   const payload = {
     id: Number(id),
@@ -413,7 +511,7 @@ async function updateExistingQuote({ id, clientId, form, summary, items, setting
   };
 
   try {
-    const res = await fetch("/api/update-quote.php", {
+    const res = await fetch(`${baseUrl}/update-quote.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -424,10 +522,16 @@ async function updateExistingQuote({ id, clientId, form, summary, items, setting
       throw new Error(data.error || "Bijwerken mislukt.");
     }
 
-    alert(`Offerte #${id} succesvol bijgewerkt.`);
+    notify({
+      type: "success",
+      message: `Offerte #${id} succesvol bijgewerkt.`,
+    });
     navigate(`/offertes/${id}`);
   } catch (error) {
     console.error("Fout bij bijwerken offerte:", error);
-    alert(error?.message || "Er ging iets mis bij het bijwerken van de offerte.");
+    notify({
+      type: "error",
+      message: error?.message || "Er ging iets mis bij het bijwerken van de offerte.",
+    });
   }
 }

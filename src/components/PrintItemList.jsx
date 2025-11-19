@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { baseUrl } from "../lib/constants";
 
 export default function PrintItemList({
   printItems = [],
@@ -11,7 +12,7 @@ export default function PrintItemList({
   useEffect(() => {
     async function fetchMaterials() {
       try {
-        const response = await fetch("/api/get-materials.php");
+        const response = await fetch(`${baseUrl}/get-materials.php`);
         if (!response.ok) {
           throw new Error("Fout bij laden materialen");
         }

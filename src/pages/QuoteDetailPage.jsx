@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import TerminalBackButton from "../components/TerminalBackButton";
+import { baseUrl } from "../lib/constants";
 
 const dateFormatter = new Intl.DateTimeFormat("nl-BE", {
   day: "2-digit",
@@ -24,7 +25,7 @@ export default function QuoteDetailPage() {
   useEffect(() => {
     async function fetchDetail() {
       try {
-        const response = await fetch(`/api/get-quote-detail.php?id=${id}`, { cache: "no-store" });
+        const response = await fetch(`${baseUrl}/get-quote-detail.php?id=${id}`, { cache: "no-store" });
         if (!response.ok) {
           throw new Error("Offerte niet gevonden.");
         }
@@ -78,7 +79,7 @@ export default function QuoteDetailPage() {
 
     try {
       setDeleting(true);
-      const response = await fetch("/api/delete-quote.php", {
+      const response = await fetch(`${baseUrl}/delete-quote.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),

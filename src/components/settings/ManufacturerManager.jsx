@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import TerminalBackButton from "../TerminalBackButton";
 import { baseUrl } from "../../lib/constants";
+import { useToast } from "../../context/ToastContext";
 
 const EMPTY_FORM = {
   id: null,
@@ -15,6 +16,7 @@ export default function ManufacturerManager() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isEditing, setIsEditing] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchManufacturers();
@@ -27,7 +29,10 @@ export default function ManufacturerManager() {
       setManufacturers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Fout bij ophalen fabrikanten:", error);
-      alert("Fabrikanten konden niet geladen worden.");
+      showToast({
+        type: "error",
+        message: "Fabrikanten konden niet geladen worden.",
+      });
     } finally {
       setLoading(false);
     }
@@ -66,12 +71,22 @@ export default function ManufacturerManager() {
 
       if (response.ok && result.success) {
         setManufacturers((prev) => prev.filter((manufacturer) => manufacturer.id !== id));
+        showToast({
+          type: "success",
+          message: "Fabrikant verwijderd.",
+        });
       } else {
-        alert("Verwijderen mislukt.");
+        showToast({
+          type: "error",
+          message: "Verwijderen mislukt.",
+        });
       }
     } catch (error) {
       console.error("Fout bij verwijderen fabrikant:", error);
-      alert("Er ging iets mis bij het verwijderen.");
+      showToast({
+        type: "error",
+        message: "Er ging iets mis bij het verwijderen.",
+      });
     }
   };
 
@@ -102,10 +117,18 @@ export default function ManufacturerManager() {
         fetchManufacturers();
       }
 
+      showToast({
+        type: "success",
+        message: form.id ? "Fabrikant bijgewerkt." : "Fabrikant toegevoegd.",
+      });
+
       handleReset();
     } catch (error) {
       console.error("Fout bij opslaan fabrikant:", error);
-      alert(error.message);
+      showToast({
+        type: "error",
+        message: error.message,
+      });
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { baseUrl } from "../lib/constants";
 
 export default function ClientAddModal({ isOpen, onClose, onSave }) {
   const [form, setForm] = useState({
@@ -23,7 +24,7 @@ export default function ClientAddModal({ isOpen, onClose, onSave }) {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/save-client.php", {
+      const response = await fetch(`${baseUrl}/save-client.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

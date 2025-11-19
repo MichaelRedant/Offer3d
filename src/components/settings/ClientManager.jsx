@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import TerminalBackButton from "../TerminalBackButton";
 import { baseUrl } from "../../lib/constants";
+import { useToast } from "../../context/ToastContext";
 
 const EMPTY_FORM = {
   id: null,
@@ -18,6 +19,7 @@ export default function ClientManager() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isEditing, setIsEditing] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     async function fetchClients() {
@@ -52,7 +54,10 @@ export default function ClientManager() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        alert("Fout bij opslaan klant.");
+        showToast({
+          type: "error",
+          message: "Fout bij opslaan klant.",
+        });
         return;
       }
 
@@ -64,11 +69,19 @@ export default function ClientManager() {
         setClients((prev) => [...prev, { ...form, id: result.id }]);
       }
 
+      showToast({
+        type: "success",
+        message: form.id ? "Klant bijgewerkt." : "Klant toegevoegd.",
+      });
+
       setForm(EMPTY_FORM);
       setIsEditing(false);
     } catch (error) {
       console.error("Opslagfout:", error);
-      alert("Serverfout bij het opslaan van de klant.");
+      showToast({
+        type: "error",
+        message: "Serverfout bij het opslaan van de klant.",
+      });
     }
   };
 
@@ -89,9 +102,22 @@ export default function ClientManager() {
       const result = await response.json();
       if (response.ok && result.success) {
         setClients((prev) => prev.filter((client) => client.id !== id));
+        showToast({
+          type: "success",
+          message: "Klant verwijderd.",
+        });
+      } else {
+        showToast({
+          type: "error",
+          message: "Verwijderen van de klant is mislukt.",
+        });
       }
     } catch (error) {
       console.error("Fout bij verwijderen:", error);
+      showToast({
+        type: "error",
+        message: "Serverfout bij verwijderen van klant.",
+      });
     }
   };
 

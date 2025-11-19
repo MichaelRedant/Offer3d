@@ -4,5 +4,14 @@
 </Files>
 
 RewriteEngine On
+
+# Forceer HTTPS zodat alle requests via TLS lopen
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301,NE]
+
+# Dwing het hoofddomein af (geen www-variant)
+RewriteCond %{HTTP_HOST} ^www\.xinudesign\.be$ [NC]
+RewriteRule ^(.*)$ https://xinudesign.be/$1 [L,R=301,NE]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^ api/update-settings.php [QSA,L,PT]

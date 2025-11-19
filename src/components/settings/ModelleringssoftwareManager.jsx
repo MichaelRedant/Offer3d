@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useToast } from "../../context/ToastContext";
+import { baseUrl } from "../../lib/constants";
 
 const EMPTY_FORM = {
   naam: "",
@@ -13,6 +15,7 @@ export default function ModelleringssoftwareManager() {
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchSoftware();
@@ -21,12 +24,15 @@ export default function ModelleringssoftwareManager() {
   async function fetchSoftware() {
     try {
       setLoading(true);
-      const response = await fetch("/api/get-modelleringssoftware.php");
+      const response = await fetch(`${baseUrl}/get-modelleringssoftware.php`);
       const data = await response.json();
       setSoftwareList(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Fout bij het ophalen van software:", error);
-      alert("Software kon niet geladen worden.");
+      showToast({
+        type: "error",
+        message: "Software kon niet geladen worden.",
+      });
     } finally {
       setLoading(false);
     }
@@ -62,7 +68,7 @@ export default function ModelleringssoftwareManager() {
     }
 
     try {
-      const response = await fetch("/api/save-modelleringssoftware.php", {
+      const response = await fetch(`${baseUrl}/save-modelleringssoftware.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -76,9 +82,16 @@ export default function ModelleringssoftwareManager() {
 
       await fetchSoftware();
       resetForm();
+      showToast({
+        type: "success",
+        message: editId ? "Software bijgewerkt." : "Software toegevoegd.",
+      });
     } catch (error) {
       console.error("Fout bij opslaan software:", error);
-      alert(error.message);
+      showToast({
+        type: "error",
+        message: error.message,
+      });
     } finally {
       setSaving(false);
     }
@@ -88,7 +101,7 @@ export default function ModelleringssoftwareManager() {
     if (!confirm("Weet je zeker dat je deze software wilt verwijderen?")) return;
 
     try {
-      const response = await fetch("/api/delete-modelleringssoftware.php", {
+      const response = await fetch(`${baseUrl}/delete-modelleringssoftware.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
@@ -104,9 +117,16 @@ export default function ModelleringssoftwareManager() {
       if (editId === id) {
         resetForm();
       }
+      showToast({
+        type: "success",
+        message: "Software verwijderd.",
+      });
     } catch (error) {
       console.error("Fout bij verwijderen software:", error);
-      alert(error.message);
+      showToast({
+        type: "error",
+        message: error.message,
+      });
     }
   };
 
