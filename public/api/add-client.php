@@ -18,40 +18,52 @@ $user_id = 1;
 try {
     $data = json_decode(file_get_contents("php://input"), true);
 
-    if (!$data || !isset($data['naam']) || trim($data['naam']) === '') {
+    $naam = isset($data['naam']) ? trim((string)$data['naam']) : '';
+    if ($naam === '') {
         throw new Exception("Naam van klant is verplicht.");
     }
 
-    if (!isset($data['email']) || trim($data['email']) === '') {
-        throw new Exception("E-mailadres is verplicht.");
+    $email = isset($data['email']) ? trim((string)$data['email']) : '';
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        throw new Exception("Ongeldig e-mailadres.");
     }
+
+    $normalize = static function ($value) {
+        if (!isset($value)) {
+            return null;
+        }
+        $trimmed = trim((string)$value);
+        return $trimmed === '' ? null : $trimmed;
+    };
 
     $stmt = $pdo->prepare("
         INSERT INTO clients (user_id, naam, email, bedrijf, btw_nummer, adres, telefoon)
         VALUES (:user_id, :naam, :email, :bedrijf, :btw_nummer, :adres, :telefoon)
     ");
 
-    $stmt->execute([
+    $payload = [
         ':user_id'    => $user_id,
-        ':naam'       => trim($data['naam']),
-        ':email'      => trim($data['email']),
-        ':bedrijf'    => $data['bedrijf'] ?? null,
-        ':btw_nummer' => $data['btw_nummer'] ?? null,
-        ':adres'      => $data['adres'] ?? null,
-        ':telefoon'   => $data['telefoon'] ?? null
-    ]);
+        ':naam'       => $naam,
+        ':email'      => $email,
+        ':bedrijf'    => $normalize($data['bedrijf'] ?? null),
+        ':btw_nummer' => $normalize($data['btw_nummer'] ?? null),
+        ':adres'      => $normalize($data['adres'] ?? null),
+        ':telefoon'   => $normalize($data['telefoon'] ?? null)
+    ];
+
+    $stmt->execute($payload);
 
     echo json_encode([
         'success' => true,
         'client' => [
             'id'          => $pdo->lastInsertId(),
             'user_id'     => $user_id,
-            'naam'        => $data['naam'],
-            'email'       => $data['email'],
-            'bedrijf'     => $data['bedrijf'] ?? null,
-            'btw_nummer'  => $data['btw_nummer'] ?? null,
-            'adres'       => $data['adres'] ?? null,
-            'telefoon'    => $data['telefoon'] ?? null
+            'naam'        => $naam,
+            'email'       => $email,
+            'bedrijf'     => $payload[':bedrijf'],
+            'btw_nummer'  => $payload[':btw_nummer'],
+            'adres'       => $payload[':adres'],
+            'telefoon'    => $payload[':telefoon']
         ]
     ]);
 } catch (Exception $e) {

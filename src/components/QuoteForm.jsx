@@ -84,174 +84,196 @@ export default function QuoteForm({ onChange }) {
     <section className="terminal-card space-y-6">
       <header className="space-y-2">
         <p className="terminal-section-title">Formulier</p>
-        <h2 className="text-2xl font-semibold tracking-dial uppercase">
+        <h2 className="text-2xl font-semibold tracking-dial uppercase text-base-soft">
           Offertegegevens
         </h2>
+        <p className="text-sm text-gridline/70">
+          Vul basisgegevens, marges en toeslagen in. Pas leveroptie en korting aan; wijzigingen
+          worden direct in de samenvatting doorgerekend.
+        </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <Input
-          label="Offertedatum"
-          type="date"
-          name="offertedatum"
-          value={form.offertedatum}
-          onChange={handleChange}
-        />
-
-        <Input
-          label="Aantal prints"
-          type="number"
-          name="aantalPrints"
-          value={form.aantalPrints}
-          onChange={handleChange}
-          min={1}
-        />
-
-        <div className="md:col-span-2">
-          <Checkbox
-            label="Meerdere printbedden?"
-            name="meerderePrintbedden"
-            checked={form.meerderePrintbedden}
-            onChange={handleCheckboxChange}
+      <div className="grid gap-6">
+        <Fieldset title="Basis">
+          <Input
+            label="Offertedatum"
+            type="date"
+            name="offertedatum"
+            value={form.offertedatum}
+            onChange={handleChange}
           />
-        </div>
 
-        {form.meerderePrintbedden && (
-          <div className="md:col-span-2">
+          <Input
+            label="Aantal prints"
+            type="number"
+            name="aantalPrints"
+            value={form.aantalPrints}
+            onChange={handleChange}
+            min={1}
+          />
+
+          <div className="md:col-span-2 flex flex-wrap gap-4">
             <Checkbox
-              label="Groepeer items per bed"
-              name="groepeerPerBed"
-              checked={form.groepeerPerBed}
+              label="Meerdere printbedden"
+              name="meerderePrintbedden"
+              checked={form.meerderePrintbedden}
+              onChange={handleCheckboxChange}
+            />
+            {form.meerderePrintbedden && (
+              <Checkbox
+                label="Groepeer items per bed"
+                name="groepeerPerBed"
+                checked={form.groepeerPerBed}
+                onChange={handleCheckboxChange}
+              />
+            )}
+          </div>
+        </Fieldset>
+
+        <Fieldset title="Marges & kosten">
+          <Input
+            label="Globale winstmarge (%)"
+            type="number"
+            name="globaleWinstmarge"
+            value={form.globaleWinstmarge}
+            onChange={handleChange}
+            disabled={form.gebruikGeenMarge || form.gebruikIndividueleMarges}
+            min={0}
+          />
+
+          <Input
+            label="Materiaalopslag (%)"
+            type="number"
+            name="materialMarkup"
+            value={form.materialMarkup}
+            onChange={handleChange}
+            min={0}
+            step={0.01}
+          />
+
+          <div className="space-y-2">
+            <Checkbox
+              label="Geen marge toepassen"
+              name="gebruikGeenMarge"
+              checked={form.gebruikGeenMarge}
+              onChange={handleCheckboxChange}
+            />
+            <Checkbox
+              label="Marges per item gebruiken"
+              name="gebruikIndividueleMarges"
+              checked={form.gebruikIndividueleMarges}
               onChange={handleCheckboxChange}
             />
           </div>
-        )}
 
-        <Input
-          label="Globale winstmarge (%)"
-          type="number"
-          name="globaleWinstmarge"
-          value={form.globaleWinstmarge}
-          onChange={handleChange}
-          disabled={form.gebruikGeenMarge || form.gebruikIndividueleMarges}
-          min={0}
-        />
-
-        <div className="space-y-3">
-          <Checkbox
-            label="Geen marge toepassen"
-            name="gebruikGeenMarge"
-            checked={form.gebruikGeenMarge}
-            onChange={handleCheckboxChange}
+          <Input
+            label="Elektriciteitsprijs (EUR/kWh)"
+            type="number"
+            step="0.0001"
+            name="elektriciteitsprijs"
+            value={form.elektriciteitsprijs}
+            onChange={handleChange}
+            disabled={!form.overrideElektriciteitsprijs}
+            min={0}
+            helper="Schakel override in om een afwijkende kWh-kost te gebruiken."
           />
           <Checkbox
-            label="Gebruik marges per item"
-            name="gebruikIndividueleMarges"
-            checked={form.gebruikIndividueleMarges}
+            label="Elektriciteit override"
+            name="overrideElektriciteitsprijs"
+            checked={form.overrideElektriciteitsprijs}
             onChange={handleCheckboxChange}
           />
-        </div>
 
-        <Input
-          label="Elektriciteitsprijs (EUR/kWh)"
-          type="number"
-          step="0.0001"
-          name="elektriciteitsprijs"
-          value={form.elektriciteitsprijs}
-          onChange={handleChange}
-          disabled={!form.overrideElektriciteitsprijs}
-          min={0}
-        />
+          <Input
+            label="Vaste startkost (EUR)"
+            type="number"
+            name="vasteStartkost"
+            value={form.vasteStartkost}
+            onChange={handleChange}
+            min={0}
+            step={0.01}
+          />
 
-        <Checkbox
-          label="Elektriciteit override?"
-          name="overrideElektriciteitsprijs"
-          checked={form.overrideElektriciteitsprijs}
-          onChange={handleCheckboxChange}
-        />
+          <Input
+            label="Vervoerskost (EUR)"
+            type="number"
+            name="vervoerskost"
+            value={form.vervoerskost}
+            onChange={handleChange}
+            min={0}
+            step={0.01}
+          />
 
-        <Input
-          label="Vaste startkost (EUR)"
-          type="number"
-          name="vasteStartkost"
-          value={form.vasteStartkost}
-          onChange={handleChange}
-          min={0}
-          step={0.01}
-        />
+          <Input
+            label="Project toeslagen (EUR)"
+            type="number"
+            name="extraAllowances"
+            value={form.extraAllowances}
+            onChange={handleChange}
+            min={0}
+            step={0.01}
+            helper="Voor manuele correcties of aparte toeslagen."
+          />
+        </Fieldset>
 
-        <Input
-          label="Vervoerskost (EUR)"
-          type="number"
-          name="vervoerskost"
-          value={form.vervoerskost}
-          onChange={handleChange}
-          min={0}
-          step={0.01}
-        />
+        <Fieldset title="Levering & korting">
+          <Select
+            label="Leveringsoptie"
+            name="deliveryType"
+            value={form.deliveryType}
+            onChange={handleChange}
+            options={[
+              { value: "afhaling", label: "Afhaling" },
+              { value: "post", label: "Post" },
+              { value: "24h", label: "Spoed 24h" },
+              { value: "48h", label: "Snelle levering 48h" },
+            ]}
+          />
 
-        <Input
-          label="Extra toeslagen project (EUR)"
-          type="number"
-          name="extraAllowances"
-          value={form.extraAllowances}
-          onChange={handleChange}
-          min={0}
-          step={0.01}
-        />
+          <Input
+            label="Korting (%)"
+            type="number"
+            name="korting"
+            value={form.korting}
+            onChange={handleChange}
+            min={0}
+            step={0.01}
+          />
+        </Fieldset>
 
-        <Input
-          label="Korting (%)"
-          type="number"
-          name="korting"
-          value={form.korting}
-          onChange={handleChange}
-          min={0}
-          step={0.01}
-        />
-
-        <Input
-          label="Materiaalopslag (%)"
-          type="number"
-          name="materialMarkup"
-          value={form.materialMarkup}
-          onChange={handleChange}
-          min={0}
-          step={0.01}
-        />
-
-        <Select
-          label="Leveringsoptie"
-          name="deliveryType"
-          value={form.deliveryType}
-          onChange={handleChange}
-          options={[
-            { value: "afhaling", label: "Afhaling" },
-            { value: "post", label: "Post" },
-            { value: "24h", label: "Spoed 24h" },
-            { value: "48h", label: "Snelle levering 48h" },
-          ]}
-        />
-
-        <Input
-          label="BTW (%)"
-          type="number"
-          name="btw"
-          value={form.btw}
-          onChange={handleChange}
-          min={0}
-          step={0.01}
-        />
+        <Fieldset title="Fiscale instellingen">
+          <Input
+            label="BTW (%)"
+            type="number"
+            name="btw"
+            value={form.btw}
+            onChange={handleChange}
+            min={0}
+            step={0.01}
+          />
+        </Fieldset>
       </div>
     </section>
   );
 }
 
-function Input({ label, wrapperClassName = "", ...props }) {
+function Fieldset({ title, children }) {
+  return (
+    <div className="rounded-card border border-gridline/50 bg-parchment/85 p-4 shadow-terminal space-y-4">
+      <div className="space-y-1">
+        <p className="text-xs uppercase tracking-[0.14em] text-gridline/70">{title}</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">{children}</div>
+    </div>
+  );
+}
+
+function Input({ label, wrapperClassName = "", helper, ...props }) {
   return (
     <label className={`flex flex-col gap-2 ${wrapperClassName}`}>
       <span className="terminal-label">{label}</span>
       <input {...props} className="terminal-input" />
+      {helper && <span className="text-xs text-gridline/70">{helper}</span>}
     </label>
   );
 }

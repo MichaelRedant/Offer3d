@@ -1,6 +1,7 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { SettingsContext } from "../context/SettingsContext";
+import { baseUrl } from "../lib/constants";
 
 const QUICK_LINKS = [
   { to: "/offerte", title: "Nieuwe offerte", description: "Start direct met een leeg voorstel.", accent: "accent" },
@@ -11,7 +12,7 @@ const QUICK_LINKS = [
 
 const RESOURCE_LINKS = [
   { to: "/instellingen/klanten", label: "Klantendatabase", helper: "Beheer contactinfo voor offertes." },
-  { to: "/instellingen/fabrikanten", label: "Fabrikanten", helper: "Koppel materialen aan leveranciers." },
+  { to: "/materialen", label: "Materialen", helper: "Beheer voorraad en leverancierskoppeling." },
   { to: "/instellingen/drogers", label: "Drogers & tools", helper: "Houd hardware-inventaris bij." },
 ];
 
@@ -113,6 +114,7 @@ export default function Home() {
     <main className="space-y-8">
       <HeroPanel settingsLoading={settingsLoading} metrics={metrics} status={status} />
       <QuickNavigation />
+      <DashboardMetrics />
       <section className="grid gap-6 lg:grid-cols-3">
         <RecentQuoteList quotes={latestQuotes} loading={status.loading} />
         <SystemChecklist settings={settings} overview={overview} className="lg:col-span-2" />
@@ -130,7 +132,7 @@ function HeroPanel({ settingsLoading, metrics, status }) {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-semibold tracking-dial uppercase text-base-soft">Offr3D Console</h1>
-            <p className="text-sm text-ink/90">
+            <p className="text-sm text-gridline/90">
               Monitor offertes, voorraad en instellingen vanaf \u00e9\u00e9n startscherm.
             </p>
           </div>
@@ -146,7 +148,7 @@ function HeroPanel({ settingsLoading, metrics, status }) {
       </header>
 
       {status.errors.length > 0 && (
-        <div className="rounded-card border border-signal-amber/60 bg-signal-amber/10 p-4 text-sm text-ink">
+        <div className="rounded-card border border-signal-amber/60 bg-signal-amber/10 p-4 text-sm text-base-soft">
           <p className="font-semibold tracking-[0.08em]">Niet alle gegevens konden worden geladen:</p>
           <ul className="mt-1 list-disc pl-4">
             {status.errors.map((message, index) => (
@@ -162,8 +164,8 @@ function HeroPanel({ settingsLoading, metrics, status }) {
             key={metric.label}
             className="rounded-card border border-gridline/40 bg-base-soft/15 p-4 shadow-terminal space-y-1"
           >
-            <p className="terminal-label text-ink/80">{metric.label}</p>
-            <p className="text-2xl font-semibold tracking-[0.12em] text-ink">{metric.value}</p>
+            <p className="terminal-label text-base-soft">{metric.label}</p>
+            <p className="text-2xl font-semibold tracking-[0.12em] text-base-soft">{metric.value}</p>
             <p className="text-xs text-gridline/90">{metric.helper}</p>
           </article>
         ))}
@@ -194,8 +196,8 @@ function QuickNavigation() {
             className={`group rounded-card border border-gridline/50 bg-parchment/95 p-4 shadow-terminal transition duration-200 hover:-translate-y-1 hover:shadow-terminal-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${link.accent ? "border-primary/70" : ""}`}
           >
             <p className="text-xs tracking-[0.16em] text-primary">{link.title}</p>
-            <p className="text-lg font-semibold tracking-[0.08em] text-ink">{link.description}</p>
-            <span className="mt-3 inline-flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-ink group-hover:text-primary">
+            <p className="text-lg font-semibold tracking-[0.08em] text-base-soft">{link.description}</p>
+            <span className="mt-3 inline-flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-base-soft group-hover:text-primary">
               Open module
               <span aria-hidden="true">⇢</span>
             </span>
@@ -320,7 +322,7 @@ function SystemChecklist({ settings, overview, className = "" }) {
 
       {allDone && (
         <div className="flex items-center justify-between gap-3 rounded-card border border-signal-green/40 bg-signal-green/10 p-3">
-          <p className="text-sm font-medium tracking-[0.08em] text-ink">Alle controles zijn voltooid.</p>
+          <p className="text-sm font-medium tracking-[0.08em] text-base-soft">Alle controles zijn voltooid.</p>
           <button
             type="button"
             onClick={() => setCollapsed((prev) => !prev)}
@@ -377,6 +379,96 @@ function ResourceGrid() {
           <ResourceLink key={resource.label} resource={resource} />
         ))}
       </div>
+    </section>
+  );
+}
+
+function DashboardMetrics() {
+  const [metrics, setMetrics] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`${baseUrl}/get-quote-metrics.php`, { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
+        setMetrics(data);
+      })
+      .catch(() => {
+        if (!active) return;
+        setMetrics(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const cards = [
+    {
+      label: "Hitrate",
+      value: metrics ? `${Number(metrics.hitrate ?? 0).toFixed(1)}%` : "—",
+      helper: "Geaccepteerde offertes / totaal",
+    },
+    {
+      label: "Gem. doorlooptijd",
+      value: metrics ? `${Number(metrics.avg_lead_time_days ?? 0).toFixed(1)} dagen` : "—",
+      helper: "Van creatie tot geaccepteerd",
+    },
+    {
+      label: "In review",
+      value: metrics?.status_counts?.review?.count ?? 0,
+      helper: "Aantal offertes in review",
+    },
+    {
+      label: "Totale omzet (geaccepteerd)",
+      value: metrics ? `${Number(metrics.accepted_revenue ?? 0).toFixed(2)} EUR` : "—",
+      helper: "Som totaal_bruto van geaccepteerd",
+    },
+  ];
+
+  return (
+    <section className="terminal-card space-y-4 bg-parchment/95">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="terminal-section-title">Analyse</p>
+          <h2 className="text-xl font-semibold tracking-dial uppercase text-base-soft">Kerncijfers</h2>
+        </div>
+        <span className="terminal-note">{loading ? "Laden..." : "Live status"}</span>
+      </header>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {cards.map((card) => (
+          <div
+            key={card.label}
+            className="rounded-card border border-gridline/60 bg-parchment/85 p-4 shadow-terminal-inset space-y-1"
+          >
+            <p className="terminal-label">{card.label}</p>
+            <p className="text-xl font-semibold tracking-[0.14em] text-base-soft">{card.value}</p>
+            <p className="text-xs text-gridline/70">{card.helper}</p>
+          </div>
+        ))}
+      </div>
+      {metrics?.omzet_per_klant?.length > 0 && (
+        <div className="space-y-2">
+          <p className="terminal-label">Top 5 klanten op omzet</p>
+          <ul className="grid gap-2 md:grid-cols-2">
+            {metrics.omzet_per_klant.map((row, idx) => (
+              <li
+                key={`${row.klant}-${idx}`}
+                className="rounded-card border border-gridline/50 bg-base-soft/15 p-3 flex items-center justify-between"
+              >
+                <span className="text-sm text-base-soft">{row.klant || "Onbekende klant"}</span>
+                <span className="text-sm font-semibold text-primary">
+                  {Number(row.omzet ?? 0).toFixed(2)} EUR
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

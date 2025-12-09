@@ -1,17 +1,34 @@
 <Files "env.php">
+  Require all denied
   Order allow,deny
   Deny from all
 </Files>
 
-RewriteEngine On
+Options -Indexes
 
-# Forceer HTTPS zodat alle requests via TLS lopen
+RewriteEngine On
+RewriteBase /offr3d/
+
+# Force HTTPS, ook achter een proxy (bijv. Cloudflare)
 RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301,NE]
 
-# Dwing het hoofddomein af (geen www-variant)
-RewriteCond %{HTTP_HOST} ^www\.xinudesign\.be$ [NC]
-RewriteRule ^(.*)$ https://xinudesign.be/$1 [L,R=301,NE]
+# Laat API-requests met PHP met rust
+RewriteRule ^api/ - [L]
 
+# Vite SPA fallback zodat refresh/deep-links in submap blijven werken
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^ api/update-settings.php [QSA,L,PT]
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . index.html [L]
+
+# Security headers
+Header always set X-Frame-Options "SAMEORIGIN"
+Header always set X-Content-Type-Options "nosniff"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+Header always set Permissions-Policy "geolocation=(), camera=(), microphone=()"
+# Beperkte CSP; breid uit indien nodig (connect-src ook https: voor PWA updates indien nodig)
+Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https:; font-src 'self' data:;"
+
+# HSTS (alleen als je HTTPS correct hebt)
+Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"

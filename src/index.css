@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Orbitron:wght@500;600;700&family=VT323&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,6 +9,9 @@
     color-scheme: dark;
     --terminal-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
     --terminal-glow: rgba(244, 184, 96, 0.25);
+    --bg-main: #131210;
+    --bg-card: rgba(228, 214, 180, 0.9);
+    --text-main: #fdf4db;
   }
 
   body {
@@ -226,12 +229,108 @@
 }
 
 @layer components {
+  /* Hawkins Synth theme overrides */
+  .theme-hawkins body {
+    background: radial-gradient(circle at 20% 20%, rgba(215, 38, 61, 0.08), transparent 40%),
+      radial-gradient(circle at 80% 10%, rgba(0, 230, 255, 0.08), transparent 45%),
+      linear-gradient(180deg, #06060a 0%, #0b0f1a 100%);
+    color: #e8ecff;
+    font-family: 'Orbitron', 'IBM Plex Mono', 'VT323', monospace;
+  }
+
+  .theme-hawkins .terminal-card {
+    background: linear-gradient(180deg, rgba(11, 15, 26, 0.9), rgba(6, 6, 10, 0.95));
+    border: 1px solid #161821;
+    box-shadow: 0 0 0 1px rgba(0, 230, 255, 0.2), 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 30px rgba(255, 0, 56, 0.2);
+    color: #e8ecff;
+  }
+
+  .theme-hawkins .terminal-card p,
+  .theme-hawkins .terminal-card li {
+    color: #e8ecff;
+  }
+
+  .theme-hawkins .terminal-label,
+  .theme-hawkins .terminal-section-title {
+    color: #00e6ff;
+    text-shadow: 0 0 6px rgba(0, 230, 255, 0.5);
+  }
+
+  .theme-hawkins .terminal-note {
+    color: #b7bfd8;
+  }
+
+  .theme-hawkins .terminal-button {
+    background: #161821;
+    border-color: #00e6ff;
+    color: #e8ecff;
+    box-shadow: 0 0 8px rgba(0, 230, 255, 0.35);
+  }
+  .theme-hawkins .terminal-button.is-accent {
+    background: #d7263d;
+    border-color: #ff0038;
+    color: #fff;
+    box-shadow: 0 0 12px rgba(215, 38, 61, 0.6);
+  }
+  .theme-hawkins .terminal-button.is-ghost {
+    background: transparent;
+    border-color: #161821;
+    color: #e8ecff;
+  }
+
+  .theme-hawkins .terminal-input,
+  .theme-hawkins select.terminal-input,
+  .theme-hawkins textarea.terminal-input {
+    background: #0b0f1a;
+    border-color: #00e6ff;
+    color: #e8ecff;
+    text-shadow: 0 0 4px rgba(0, 230, 255, 0.4);
+  }
+  .theme-hawkins .terminal-input:focus {
+    box-shadow: 0 0 8px rgba(0, 230, 255, 0.5);
+  }
+
+  .theme-hawkins .terminal-pill {
+    background: rgba(255, 0, 56, 0.12);
+    border-color: rgba(255, 0, 56, 0.5);
+    color: #ff00a8;
+  }
+
+  .theme-hawkins .terminal-topbar {
+    background: linear-gradient(90deg, rgba(6, 6, 10, 0.92), rgba(11, 15, 26, 0.9));
+    border-color: #161821;
+    box-shadow: 0 0 0 1px rgba(0, 230, 255, 0.2), 0 16px 40px rgba(0, 0, 0, 0.75);
+  }
+
+  .theme-hawkins .terminal-topbar__link {
+    @apply text-[0.7rem];
+    color: #e8ecff;
+    border-color: #00e6ff;
+  }
+
+  .theme-hawkins .terminal-topbar__link.is-active {
+    background: #d7263d;
+    border-color: #ff0038;
+    color: #fff;
+    box-shadow: 0 0 12px rgba(255, 0, 56, 0.6);
+  }
+
+  .theme-hawkins h1,
+  .theme-hawkins h2,
+  .theme-hawkins h3,
+  .theme-hawkins h4 {
+    font-family: 'Orbitron', 'IBM Plex Mono', monospace;
+    letter-spacing: 0.16em;
+    color: #d7263d;
+    text-shadow: 0 0 8px rgba(255, 0, 56, 0.6);
+  }
+
   .terminal-shell {
     @apply relative min-h-screen text-ink bg-transparent overflow-hidden;
   }
 
   .terminal-topbar {
-    @apply sticky top-0 z-20 mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-6 text-xs uppercase;
+    @apply sticky top-0 z-20 mx-auto flex w-full max-w-6xl flex-wrap items-center gap-3 px-4 py-4 text-xs uppercase sm:flex-nowrap sm:justify-between sm:gap-4 sm:px-6 sm:py-5;
     backdrop-filter: blur(14px);
     background: linear-gradient(90deg, rgba(27, 26, 23, 0.95), rgba(19, 18, 16, 0.82));
     border: 1px solid rgba(45, 40, 31, 0.75);
@@ -240,7 +339,7 @@
   }
 
   .terminal-topbar__brand {
-    @apply flex items-center gap-3 tracking-[0.2em] text-gridline/80;
+    @apply flex items-center gap-2 tracking-[0.16em] text-gridline/80;
   }
 
   .terminal-topbar__led {
@@ -257,11 +356,11 @@
   }
 
   .terminal-topbar__nav {
-    @apply flex items-center gap-3;
+    @apply flex items-center gap-2 w-full sm:w-auto flex-wrap;
   }
 
   .terminal-topbar__link {
-    @apply terminal-button is-ghost text-[0.65rem] px-4 py-1.5 border-gridline/60 transition-none;
+    @apply terminal-button is-ghost text-[0.7rem] px-3 py-1.5 border-gridline/60 transition-none;
     transform: none;
   }
 
@@ -275,7 +374,17 @@
   }
 
   .terminal-page {
-    @apply relative z-10 max-w-6xl mx-auto px-6 pb-16 pt-6 space-y-10;
+    @apply relative z-10 max-w-6xl mx-auto px-6 pb-28 pt-6 space-y-10;
+  }
+
+  .terminal-actionbar {
+    @apply fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-3;
+    pointer-events: none;
+  }
+
+  .terminal-actionbar__inner {
+    @apply flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 rounded-card border border-gridline/50 bg-base-soft/90 px-4 py-3 shadow-terminal backdrop-blur;
+    pointer-events: auto;
   }
 
   .terminal-card {
@@ -318,8 +427,13 @@
   }
 
   .terminal-input {
-    @apply w-full bg-parchment-light/80 border border-gridline/50 text-base-soft px-4 py-2.5 rounded-md shadow-terminal-inset focus:outline-none focus:ring-2 focus:ring-primary/70 focus:border-primary/60 placeholder:text-gridline/80;
-    transition: border-color 0.25s var(--terminal-ease), box-shadow 0.25s var(--terminal-ease), background-color 0.25s var(--terminal-ease);
+    @apply w-full bg-parchment/95 border border-gridline/70 text-base-soft px-4 py-2.5 rounded-md shadow-terminal-inset focus:outline-none focus:ring-2 focus:ring-primary/70 focus:border-primary/70 placeholder:text-gridline/60;
+    transition: border-color 0.25s var(--terminal-ease), box-shadow 0.25s var(--terminal-ease), background-color 0.25s var(--terminal-ease), color 0.25s var(--terminal-ease);
+  }
+
+  .terminal-input option {
+    background-color: #f1e7cb;
+    color: #1b1a17;
   }
 
   .terminal-checkbox {

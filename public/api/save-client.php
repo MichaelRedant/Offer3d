@@ -23,18 +23,32 @@ try {
     // file_put_contents("debug_client_input.json", json_encode($data, JSON_PRETTY_PRINT));
 
     // ✅ Validatie
-    if (!$data || empty($data['naam']) || empty($data['email'])) {
-        throw new Exception('Naam en e-mail zijn verplicht.');
+    $naam = isset($data['naam']) ? trim((string)$data['naam']) : '';
+    if ($naam === '') {
+        throw new Exception('Naam van klant is verplicht.');
     }
+
+    $email = isset($data['email']) ? trim((string)$data['email']) : '';
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        throw new Exception('Ongeldig e-mailadres.');
+    }
+
+    $normalize = static function ($value) {
+        if (!isset($value)) {
+            return null;
+        }
+        $trimmed = trim((string)$value);
+        return $trimmed === '' ? null : $trimmed;
+    };
 
     // ✅ Parameters voorbereiden
     $params = [
-        'naam'      => $data['naam'],
-        'email'     => $data['email'],
-        'bedrijf'   => $data['bedrijf'] ?? null,
-        'btw_nummer'=> $data['btw_nummer'] ?? null,
-        'adres'     => $data['adres'] ?? null,
-        'telefoon'  => $data['telefoon'] ?? null,
+        'naam'       => $naam,
+        'email'      => $email,
+        'bedrijf'    => $normalize($data['bedrijf'] ?? null),
+        'btw_nummer' => $normalize($data['btw_nummer'] ?? null),
+        'adres'      => $normalize($data['adres'] ?? null),
+        'telefoon'   => $normalize($data['telefoon'] ?? null),
     ];
 
     // ✅ Bepaal of het een INSERT of UPDATE is

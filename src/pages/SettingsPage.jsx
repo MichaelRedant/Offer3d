@@ -1,5 +1,6 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { baseUrl } from "../lib/constants";
 
 import { SettingsContext } from "../context/SettingsContext";
 import TerminalBackButton from "../components/TerminalBackButton";
@@ -11,6 +12,7 @@ const COST_FIELDS = [
     helper: "Percentage marge dat standaard op materiaal- en printkosten wordt gezet.",
     suffix: "%",
     min: 0,
+    type: "number",
   },
   {
     name: "elektriciteitsprijs",
@@ -19,14 +21,16 @@ const COST_FIELDS = [
     suffix: "EUR/kWh",
     min: 0,
     step: 0.001,
+    type: "number",
   },
   {
     name: "vasteStartkost",
     label: "Vaste startkost",
-    helper: "Voorbereiding, slicing, machine-opstart — éénmalig per offerte.",
+    helper: "Voorbereiding, slicing, machine-opstart ? eenmalig per offerte.",
     suffix: "EUR",
     min: 0,
     step: 0.1,
+    type: "number",
   },
   {
     name: "vervoerskost",
@@ -35,6 +39,7 @@ const COST_FIELDS = [
     suffix: "EUR",
     min: 0,
     step: 0.1,
+    type: "number",
   },
   {
     name: "modelleringTarief",
@@ -43,6 +48,7 @@ const COST_FIELDS = [
     suffix: "EUR/u",
     min: 0,
     step: 0.5,
+    type: "number",
     featured: true,
   },
 ];
@@ -54,6 +60,7 @@ const TAX_FIELDS = [
     helper: "Percentage btw dat op de offerte wordt toegepast.",
     suffix: "%",
     min: 0,
+    type: "number",
   },
   {
     name: "korting",
@@ -61,6 +68,7 @@ const TAX_FIELDS = [
     helper: "Automatische korting die op nieuwe offertes wordt voorgesteld.",
     suffix: "%",
     min: 0,
+    type: "number",
   },
 ];
 
@@ -69,21 +77,28 @@ const NAV_LINKS = [
     to: "/instellingen/fabrikanten",
     label: "Fabrikanten beheren",
     description: "Beheer leveranciers en koppel materialen aan de juiste producent.",
-    emoji: "🏭",
+    emoji: "↗",
   },
   {
     to: "/materialen",
     label: "Materialen beheren",
     description: "Pas filamentprijzen, droogvereisten en voorraadposities aan.",
-    emoji: "🧵",
+    emoji: "???",
   },
   {
     to: "/instellingen/klanten",
     label: "Klanten beheren",
     description: "Houd klantgegevens bij voor koppeling aan offertes en facturen.",
-    emoji: "👥",
+    emoji: "?",
+  },
+  {
+    to: "/instellingen/prijslijsten",
+    label: "Prijslijsten",
+    description: "Beheer klant- of materiaalgebonden prijsregels en marges.",
+    emoji: "?",
   },
 ];
+
 
 export default function SettingsPage() {
   const { settings, saveSettings, loading } = useContext(SettingsContext);
@@ -95,6 +110,11 @@ export default function SettingsPage() {
     modelleringTarief: "",
     btw: "",
     korting: "",
+    companyName: "",
+    companyAddress: "",
+    companyEmail: "",
+    companyPhone: "",
+    logoUrl: "",
   };
 
   const [formData, setFormData] = useState(emptyForm);
@@ -142,6 +162,25 @@ export default function SettingsPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleLogoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const formDataUpload = new FormData();
+    formDataUpload.append("logo", file);
+    try {
+      const res = await fetch(`${baseUrl}/upload-logo.php`, {
+        method: "POST",
+        body: formDataUpload,
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Upload mislukt");
+      setFormData((prev) => ({ ...prev, logoUrl: data.url }));
+      setStatus({ type: "success", message: "Logo geüpload." });
+    } catch (error) {
+      setStatus({ type: "error", message: error.message || "Upload mislukt." });
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSaving(true);
@@ -155,6 +194,14 @@ export default function SettingsPage() {
       modelleringTarief: parseFloat(formData.modelleringTarief || 0),
       btw: parseFloat(formData.btw || 0),
       korting: parseFloat(formData.korting || 0),
+      companyName: formData.companyName,
+      companyAddress: formData.companyAddress,
+      companyEmail: formData.companyEmail,
+      companyPhone: formData.companyPhone,
+      logoUrl: formData.logoUrl,
+      vatNumber: formData.vatNumber,
+      termsText: formData.termsText,
+      termsUrl: formData.termsUrl,
     };
 
     try {
@@ -271,6 +318,99 @@ export default function SettingsPage() {
         </div>
       </form>
 
+
+        <Section
+          title="Bedrijfsgegevens"
+          description="Deze info wordt gebruikt op offertes en PDF-export (logo optioneel)."
+        >
+          <InputField
+            label="Bedrijfsnaam"
+            name="companyName"
+            value={formData.companyName}
+            onChange={handleChange}
+            required
+          />
+          <InputField
+            label="Adres"
+            name="companyAddress"
+            value={formData.companyAddress}
+            onChange={handleChange}
+            placeholder="Straat, nummer, plaats"
+          />
+          <InputField
+            label="E-mail"
+            name="companyEmail"
+            value={formData.companyEmail}
+            onChange={handleChange}
+            type="email"
+          />
+          <InputField
+            label="Telefoon"
+            name="companyPhone"
+            value={formData.companyPhone}
+            onChange={handleChange}
+          />
+
+        <InputField
+            label="VAT-nummer"
+            name="vatNumber"
+            value={formData.vatNumber}
+            onChange={handleChange}
+            placeholder="BE0123.456.789"
+          />
+    
+          <div className="space-y-2 md:col-span-2">
+            <label className="terminal-label">Logo URL</label>
+            <div className="flex flex-wrap gap-3">
+              <input
+                type="text"
+                name="logoUrl"
+                value={formData.logoUrl}
+                onChange={handleChange}
+                className="terminal-input flex-1"
+                placeholder="https://... of /offr3d/uploads/quote-logo.png"
+              />
+              <label className="terminal-button is-ghost text-xs tracking-[0.12em] cursor-pointer">
+                Upload logo
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/svg+xml"
+                  className="hidden"
+                  onChange={handleLogoUpload}
+                />
+              </label>
+            </div>
+            <p className="text-xs text-gridline/70">
+              Bestand wordt opgeslagen in /offr3d/uploads/. Ondersteund: PNG, JPG, SVG.
+            </p>
+          </div>
+        </Section>
+
+
+        <Section
+          title="Voorwaarden"
+          description="Voeg tekstuele voorwaarden toe. Deze komen onderaan de offerte-PDF."
+        >
+          <InputField
+            label="Voorwaarden URL (optioneel PDF)"
+            name="termsUrl"
+            value={formData.termsUrl}
+            onChange={handleChange}
+            placeholder="https://... of /offr3d/uploads/voorwaarden.pdf"
+          />
+          <div className="md:col-span-2 space-y-2">
+            <label className="terminal-label" htmlFor="termsText">Voorwaarden (tekst)</label>
+            <textarea
+              id="termsText"
+              name="termsText"
+              value={formData.termsText}
+              onChange={handleChange}
+              className="terminal-input min-h-[120px]"
+              placeholder="Bijvoorbeeld leverings- en betalingsvoorwaarden"
+            />
+          </div>
+        </Section>
+
       <nav className="terminal-card space-y-4">
         <h2 className="text-xl font-semibold tracking-dial uppercase">
           Verdere configuratie
@@ -307,6 +447,7 @@ function InputField({
   name,
   value,
   onChange,
+  type = "text",
   helper,
   suffix,
   min,
@@ -328,7 +469,7 @@ function InputField({
       </label>
       <div className="flex items-center gap-2">
         <input
-          type="number"
+          type={type}
           name={name}
           id={name}
           step={step}
@@ -398,6 +539,14 @@ function extractFormValues(source) {
     modelleringTarief: source.modelleringTarief ?? "",
     btw: source.btw ?? "",
     korting: source.korting ?? "",
+    companyName: source.companyName ?? "",
+    companyAddress: source.companyAddress ?? "",
+    companyEmail: source.companyEmail ?? "",
+    companyPhone: source.companyPhone ?? "",
+    logoUrl: source.logoUrl ?? "",
+    vatNumber: source.vatNumber ?? "",
+    termsText: source.termsText ?? "",
+    termsUrl: source.termsUrl ?? "",
   };
 }
 
@@ -425,7 +574,7 @@ function LinkCard({ to, label, description, emoji }) {
   return (
     <Link
       to={to}
-      className="group rounded-card border border-gridline/50 bg-base-soft/80 p-4 shadow-terminal transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-terminal-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+      className="group rounded-card border border-gridline/50 bg-parchment/85 p-4 shadow-terminal transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-terminal-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
     >
       <div className="flex items-center justify-between gap-3">
         <span className="text-2xl" aria-hidden="true">

@@ -61,6 +61,18 @@ export default function NewQuotePage() {
   const [quoteLoaded, setQuoteLoaded] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [clientRefreshKey, setClientRefreshKey] = useState(0);
+  const [priceRules, setPriceRules] = useState([]);
+  const [priceRulesLoaded, setPriceRulesLoaded] = useState(false);
+  const [quoteStatus, setQuoteStatus] = useState("draft");
+
+  useEffect(() => {
+    if (priceRulesLoaded) return;
+    fetch(`${baseUrl}/get-price-rules.php`, { cache: "no-store" })
+      .then((res) => res.json())
+      .then((rules) => setPriceRules(Array.isArray(rules) ? rules : []))
+      .catch(() => setPriceRules([]))
+      .finally(() => setPriceRulesLoaded(true));
+  }, [priceRulesLoaded]);
 
   useEffect(() => {
     if (!settings) return;
@@ -100,6 +112,7 @@ export default function NewQuotePage() {
         }
 
         const { offerte, items: quoteItems } = data;
+        setQuoteStatus(offerte.status || "draft");
 
         setSelectedClient(
           offerte.client_id
@@ -190,9 +203,9 @@ export default function NewQuotePage() {
       setSummary(null);
       return;
     }
-    const calculated = calculateQuoteCost(items, form, settings);
+    const calculated = calculateQuoteCost(items, form, settings, priceRules, { clientId: selectedClient?.id });
     setSummary(calculated);
-  }, [items, form, settings]);
+  }, [items, form, settings, priceRules, selectedClient]);
 
   if (!settings) {
     return (
@@ -250,6 +263,7 @@ export default function NewQuotePage() {
         settings,
         navigate,
         showToast,
+        status: quoteStatus,
       });
       return;
     }
@@ -388,13 +402,21 @@ export default function NewQuotePage() {
             </div>
           )}
 
-          {selectedClient && (
-            <div className="flex justify-end">
-              <button onClick={handleSaveQuote} className="terminal-button is-accent">
-                {isEditing ? "Offerte bijwerken" : "Offerte opslaan"}
-              </button>
-            </div>
-          )}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            {!selectedClient && (
+              <p className="text-xs uppercase tracking-[0.12em] text-gridline/70">
+                Selecteer eerst een klant om de offerte op te slaan.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={handleSaveQuote}
+              className="terminal-button is-accent disabled:opacity-60"
+              disabled={!selectedClient}
+            >
+              {isEditing ? "Offerte bijwerken" : "Offerte opslaan"}
+            </button>
+          </div>
         </>
       )}
       <ClientAddModal
@@ -485,7 +507,7 @@ function validateQuoteBeforeSave({ items, summary, form }) {
   return errors;
 }
 
-async function updateExistingQuote({ id, clientId, form, summary, items, settings, navigate, showToast }) {
+async function updateExistingQuote({ id, clientId, form, summary, items, settings, navigate, showToast, status }) {
   const totals = summary?.totals ?? {};
   const notify = typeof showToast === "function" ? showToast : () => {};
 
@@ -507,6 +529,7 @@ async function updateExistingQuote({ id, clientId, form, summary, items, setting
     totaal_btw: Number(totals.vat_amount ?? 0),
     totaal_bruto: Number(totals.total_including_vat ?? totals.total_final ?? 0),
     opmerkingen: "",
+    status: status ?? "draft",
     items,
   };
 

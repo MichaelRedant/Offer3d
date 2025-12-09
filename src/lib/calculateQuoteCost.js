@@ -37,7 +37,46 @@ function calculateDeliveryCost(type, subtotalBeforeDelivery) {
   }
 }
 
-export default function calculateQuoteCost(printItems = [], form = {}, settings = {}) {
+function isRuleActive(rule, now = new Date()) {
+  if (!rule) return false;
+  if (String(rule.active ?? "1") === "0") return false;
+  const today = now.toISOString().slice(0, 10);
+  if (rule.valid_from && rule.valid_from > today) return false;
+  if (rule.valid_to && rule.valid_to < today) return false;
+  return true;
+}
+
+function findBestPriceRule(rules = [], { clientId, materialId, weightKg }) {
+  const candidates = (rules || []).filter((rule) => {
+    if (!isRuleActive(rule)) return false;
+    if (rule.material_id && materialId && Number(rule.material_id) !== Number(materialId)) return false;
+    if (rule.client_id && clientId && Number(rule.client_id) !== Number(clientId)) {
+      return false;
+    }
+    const minQty = Number(rule.min_qty ?? 0);
+    if (minQty > 0 && weightKg < minQty) return false;
+    return true;
+  });
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => {
+    const clientA = a.client_id ? 1 : 0;
+    const clientB = b.client_id ? 1 : 0;
+    const matA = a.material_id ? 1 : 0;
+    const matB = b.material_id ? 1 : 0;
+    if (clientA !== clientB) return clientB - clientA;
+    if (matA !== matB) return matB - matA;
+    const minA = Number(a.min_qty ?? 0);
+    const minB = Number(b.min_qty ?? 0);
+    if (minA !== minB) return minB - minA;
+    return (b.id || 0) - (a.id || 0);
+  });
+
+  return candidates[0];
+}
+
+export default function calculateQuoteCost(printItems = [], form = {}, settings = {}, priceRules = [], options = {}) {
   if (!Array.isArray(printItems)) {
     return { fout: "Geen printitems" };
   }
@@ -54,9 +93,20 @@ export default function calculateQuoteCost(printItems = [], form = {}, settings 
 
   let subtotalBeforeDelivery = 0;
   let totalEigenKost = 0;
+  const clientId = options?.clientId ? Number(options.clientId) : null;
 
   for (const item of printItems) {
-    const kost = calculateItemCost(item, settings, form);
+    const weightKg = toNumber(item.weight) / 1000;
+    const rule = findBestPriceRule(priceRules, {
+      clientId,
+      materialId: item.materiaal_id,
+      weightKg,
+    });
+
+    const kost = calculateItemCost(item, settings, form, {
+      pricePerKg: rule?.price_per_unit,
+      marginOverride: rule?.margin_override,
+    });
     itemResultaten.push({ item, kost });
 
     if (kost?.fout || !kost?.quote) {
@@ -73,6 +123,13 @@ export default function calculateQuoteCost(printItems = [], form = {}, settings 
     totalEigenKost += toNumber(kost.nettoKost);
 
     kost.quote.notes?.forEach((note) => notesSet.add(note));
+    if (rule) {
+      notesSet.add(
+        `Prijslijstregel toegepast: ${rule.price_per_unit ? `€${toNumber(rule.price_per_unit)} per kg` : ""}${
+          rule.margin_override ? ` / marge ${toNumber(rule.margin_override)}%` : ""
+        }${rule.client_id ? ` (klant #${rule.client_id})` : ""}`
+      );
+    }
   }
 
   const extraAllowancesForm =

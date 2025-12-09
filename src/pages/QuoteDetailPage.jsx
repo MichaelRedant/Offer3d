@@ -19,8 +19,28 @@ export default function QuoteDetailPage() {
   const { id } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState(null);
+  const [statusMessage, setStatusMessage] = useState(null);
+  const [quoteStatus, setQuoteStatus] = useState("draft");
   const [deleting, setDeleting] = useState(false);
+  const [events, setEvents] = useState([]);
+
+  const handleDownloadPdf = () => {
+    const url = `${baseUrl}/generate-quote-pdf.php?id=${id}`;
+    window.open(url, "_blank");
+  };
+
+  async function fetchEvents(quoteId) {
+    try {
+      const res = await fetch(`${baseUrl}/get-quote-events.php?quote_id=${quoteId}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setEvents(data);
+      }
+    } catch (error) {
+      // stilzwijgend falen
+    }
+  }
 
   useEffect(() => {
     async function fetchDetail() {
@@ -34,6 +54,8 @@ export default function QuoteDetailPage() {
           throw new Error(result.error);
         }
         setData(result);
+        setQuoteStatus(result?.offerte?.status || "draft");
+        fetchEvents(id);
       } catch (error) {
         console.error("Fout bij laden offerte:", error);
         setData({ error: error.message || "Offerte niet gevonden." });
@@ -91,8 +113,28 @@ export default function QuoteDetailPage() {
       navigate("/offertes");
     } catch (error) {
       console.error("Fout bij verwijderen offerte:", error);
-      setStatus({ type: "error", message: error?.message || "Verwijderen mislukt." });
+      setStatusMessage({ type: "error", message: error?.message || "Verwijderen mislukt." });
       setDeleting(false);
+    }
+  };
+
+  const handleStatusChange = async (nextStatus) => {
+    try {
+      const response = await fetch(`${baseUrl}/update-quote-status.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: nextStatus }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Status bijwerken mislukt.");
+      }
+      setQuoteStatus(result.status);
+      setStatusMessage({ type: "success", message: `Status gewijzigd naar ${result.status}.` });
+      fetchEvents(id);
+    } catch (error) {
+      console.error("Fout bij status update:", error);
+      setStatusMessage({ type: "error", message: error.message || "Status bijwerken mislukt." });
     }
   };
 
@@ -134,6 +176,9 @@ export default function QuoteDetailPage() {
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <span className="terminal-pill text-xs tracking-[0.12em]">
+              Status: {quoteStatus}
+            </span>
             <TerminalBackButton to="/offertes" label="Terug naar overzicht" />
             <Link
               to={`/offerte?edit=${offerte.id}`}
@@ -155,11 +200,31 @@ export default function QuoteDetailPage() {
           Inzage in klantinformatie, printstukken en kostopbouw. Gebruik de actieknoppen om de
           offerte te bewerken of te verwijderen.
         </p>
+        <div className="flex flex-wrap gap-2">
+          {["draft", "review", "verstuurd", "geaccepteerd", "afgewezen"].map((statusValue) => (
+            <button
+              key={statusValue}
+              type="button"
+              onClick={() => handleStatusChange(statusValue)}
+              className={`terminal-button is-ghost text-xs tracking-[0.12em] ${
+                quoteStatus === statusValue ? "border-primary/70 text-primary" : ""
+              }`}
+            >
+              {statusValue}
+            </button>
+          ))}
+        </div>
       </header>
 
-      {status && (
-        <div className="terminal-card border border-signal-red/60 bg-signal-red/10 text-signal-red text-sm tracking-[0.08em]">
-          {status.message}
+      {statusMessage && (
+        <div
+          className={`terminal-card text-sm tracking-[0.08em] ${
+            statusMessage.type === "success"
+              ? "border border-signal-green/60 bg-signal-green/10 text-signal-green"
+              : "border border-signal-red/60 bg-signal-red/10 text-signal-red"
+          }`}
+        >
+          {statusMessage.message}
         </div>
       )}
 
@@ -260,6 +325,33 @@ export default function QuoteDetailPage() {
               </article>
             ))}
           </div>
+        )}
+      </section>
+
+      <section className="terminal-card space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold tracking-dial uppercase text-base-soft">
+            Historiek
+          </h2>
+          <span className="terminal-note">{events.length} events</span>
+        </div>
+        {events.length === 0 ? (
+          <p className="terminal-note">Nog geen events geregistreerd.</p>
+        ) : (
+          <ul className="space-y-2">
+            {events.map((evt) => (
+              <li
+                key={evt.id}
+                className="rounded-card border border-gridline/50 bg-base-soft/15 p-3 flex justify-between gap-3 text-sm text-base-soft"
+              >
+                <div className="space-y-1">
+                  <p className="uppercase tracking-[0.12em] text-gridline/70">{evt.status}</p>
+                  {evt.message && <p className="text-gridline/80">{evt.message}</p>}
+                </div>
+                <span className="terminal-note">{evt.created_at}</span>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
     </main>

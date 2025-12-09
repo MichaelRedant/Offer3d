@@ -20,6 +20,14 @@ try {
     $stmt->execute([$id]);
 
     echo json_encode(['success' => true]);
+} catch (PDOException $e) {
+    if ($e->getCode() === '23000') {
+        http_response_code(409);
+        echo json_encode(['error' => 'Kan niet verwijderen: droger is nog gekoppeld. Ontkoppel eerst.']);
+        exit;
+    }
+    http_response_code(500);
+    echo json_encode(['error' => 'Verwijderen mislukt: ' . $e->getMessage()]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Verwijderen mislukt: ' . $e->getMessage()]);

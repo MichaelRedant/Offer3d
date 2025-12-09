@@ -42,6 +42,9 @@ $supportmateriaal = !empty($data['supportmateriaal']) ? 1 : 0;
 $manufacturer_id = isset($data['manufacturer_id']) ? (int) $data['manufacturer_id'] : null;
 $stock = isset($data['stock_rollen']) ? (int) $data['stock_rollen'] : 0;
 $marge = isset($data['winstmarge_perc']) ? (float) $data['winstmarge_perc'] : 0;
+$batch_code = $data['batch_code'] ?? null;
+$vervaldatum = $data['vervaldatum'] ?? null;
+$droger_status = $data['droger_status'] ?? 'nvt';
 
 try {
     $query = "
@@ -54,7 +57,10 @@ try {
             supportmateriaal = :supportmateriaal,
             manufacturer_id = :manufacturer_id,
             stock_rollen = :stock,
-            winstmarge_perc = :marge
+            winstmarge_perc = :marge,
+            batch_code = :batch_code,
+            vervaldatum = :vervaldatum,
+            droger_status = :droger_status
         WHERE id = :id
     ";
 
@@ -69,6 +75,9 @@ try {
         ':manufacturer_id' => $manufacturer_id,
         ':stock' => $stock,
         ':marge' => $marge,
+        ':batch_code' => $batch_code,
+        ':vervaldatum' => $vervaldatum,
+        ':droger_status' => $droger_status,
         ':id' => $id
     ]);
 

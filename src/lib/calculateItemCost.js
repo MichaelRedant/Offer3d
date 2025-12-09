@@ -24,7 +24,7 @@ function mergeFilamentPrices(settings) {
   return { ...FILAMENT_PRICES, ...settings.filamentPrices };
 }
 
-export default function calculateItemCost(item = {}, settings = {}, form = {}) {
+export default function calculateItemCost(item = {}, settings = {}, form = {}, overrides = {}) {
   if (!item || typeof item !== "object") {
     return { fout: "Ongeldig printitem." };
   }
@@ -62,6 +62,9 @@ export default function calculateItemCost(item = {}, settings = {}, form = {}) {
   );
 
   const marginPercentage = (() => {
+    if (overrides?.marginOverride !== undefined && overrides.marginOverride !== null) {
+      return toNumber(overrides.marginOverride);
+    }
     if (form.gebruikGeenMarge) return 0;
     if (form.gebruikIndividueleMarges) {
       return toNumber(item.margin, toNumber(form.globaleWinstmarge, 25));
@@ -97,6 +100,9 @@ export default function calculateItemCost(item = {}, settings = {}, form = {}) {
     nozzleCost + postProcessingCost + scanCost + assemblyCost + manualSurcharge;
 
   const filamentPrices = mergeFilamentPrices(settings);
+  if (overrides?.pricePerKg && filamentType) {
+    filamentPrices[filamentType] = toNumber(overrides.pricePerKg);
+  }
 
   const params = {
     printing_time_hours: printUren,

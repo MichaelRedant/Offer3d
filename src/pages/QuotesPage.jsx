@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { baseUrl } from "../lib/constants";
 
 import TerminalBackButton from "../components/TerminalBackButton";
-import { baseUrl } from "../lib/constants";
 
 const dateFormatter = new Intl.DateTimeFormat("nl-BE", {
   year: "numeric",
@@ -21,6 +21,7 @@ export default function QuotesPage() {
   const [hasError, setHasError] = useState(false);
   const [status, setStatus] = useState(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
@@ -50,15 +51,16 @@ export default function QuotesPage() {
 
   const filteredQuotes = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return quotes;
-
-    return quotes.filter(
-      (quote) =>
+    return quotes.filter((quote) => {
+      const matchesQuery =
+        !query ||
         quote.klant_naam?.toLowerCase().includes(query) ||
         quote.bedrijf?.toLowerCase().includes(query) ||
-        String(quote.id).includes(query)
-    );
-  }, [search, quotes]);
+        String(quote.id).includes(query);
+      const matchesStatus = statusFilter === "all" || quote.status === statusFilter;
+      return matchesQuery && matchesStatus;
+    });
+  }, [search, quotes, statusFilter]);
 
   const handleDelete = async (quote) => {
     const confirmed = window.confirm(
@@ -97,6 +99,9 @@ export default function QuotesPage() {
 
   const handleView = (id) => navigate(`/offertes/${id}`);
   const handleEdit = (id) => navigate(`/offerte?edit=${id}`);
+  const handleDownloadPdf = (id) => {
+    window.open(`${baseUrl}/generate-quote-pdf.php?id=${id}`, "_blank");
+  };
 
   return (
     <main className="space-y-8">
@@ -104,7 +109,7 @@ export default function QuotesPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="terminal-section-title">Archief</p>
-            <h1 className="text-3xl font-semibold tracking-dial uppercase">
+            <h1 className="text-3xl font-semibold tracking-dial uppercase text-base-soft">
               Offertes
             </h1>
           </div>
@@ -128,6 +133,27 @@ export default function QuotesPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
+        </div>
+
+
+
+        <div className="space-y-2">
+          <label htmlFor="statusFilter" className="terminal-label">
+            Status
+          </label>
+          <select
+            id="statusFilter"
+            className="terminal-input"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+          >
+            <option value="all">Alle statussen</option>
+            <option value="draft">Concept</option>
+            <option value="review">Review</option>
+            <option value="verstuurd">Verstuurd</option>
+            <option value="geaccepteerd">Geaccepteerd</option>
+            <option value="afgewezen">Afgewezen</option>
+          </select>
         </div>
 
         <div className="min-h-[60px]">
@@ -157,6 +183,7 @@ export default function QuotesPage() {
                 onView={handleView}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onDownloadPdf={handleDownloadPdf}
                 deletingId={deletingId}
               />
             ))}
@@ -167,10 +194,25 @@ export default function QuotesPage() {
   );
 }
 
-function QuoteCard({ quote, onView, onEdit, onDelete, deletingId }) {
+function QuoteCard({ quote, onView, onEdit, onDelete, deletingId, onDownloadPdf }) {
   const isDeleting = deletingId === quote.id;
+  const statusLabels = {
+    draft: "Concept",
+    review: "Review",
+    verstuurd: "Verstuurd",
+    geaccepteerd: "Geaccepteerd",
+    afgewezen: "Afgewezen",
+  };
+  const statusTone = {
+    draft: "border-gridline/50 text-base-soft",
+    review: "border-primary/60 text-primary",
+    verstuurd: "border-accent/60 text-accent",
+    geaccepteerd: "border-signal-green/60 text-signal-green",
+    afgewezen: "border-signal-red/60 text-signal-red",
+  };
+  const statusClass = statusTone[quote.status] || statusTone.draft;
   return (
-    <article className="rounded-card border border-gridline/50 bg-parchment-light/80 p-5 shadow-terminal hover:-translate-y-1 hover:shadow-terminal-glow transition-transform duration-200 ease-out">
+    <article className="rounded-card border border-gridline/40 bg-parchment/95 p-5 shadow-terminal hover:-translate-y-1 hover:shadow-terminal-glow transition-transform duration-200 ease-out text-base-soft">
       <header className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="terminal-section-title">#{quote.id.toString().padStart(4, "0")}</p>
@@ -181,10 +223,15 @@ function QuoteCard({ quote, onView, onEdit, onDelete, deletingId }) {
             <p className="text-xs tracking-[0.08em] text-gridline/70">{quote.bedrijf}</p>
           )}
         </div>
-        <span className="terminal-pill">{dateFormatter.format(new Date(quote.datum))}</span>
+        <div className="flex flex-col items-end gap-2">
+          <span className="terminal-pill text-base-soft">{dateFormatter.format(new Date(quote.datum))}</span>
+          <span className={`terminal-pill text-xs tracking-[0.12em] ${statusClass}`}>
+            {statusLabels[quote.status] || "Concept"}
+          </span>
+        </div>
       </header>
 
-      <dl className="mt-4 space-y-1 text-xs tracking-[0.08em] text-gridline/80">
+      <dl className="mt-4 space-y-1 text-xs tracking-[0.08em] text-gridline/90">
         <div className="flex justify-between gap-3">
           <dt>Items</dt>
           <dd>{quote.item_count ?? "—"}</dd>
@@ -213,6 +260,13 @@ function QuoteCard({ quote, onView, onEdit, onDelete, deletingId }) {
           onClick={() => onEdit(quote.id)}
         >
           Bewerk
+        </button>
+        <button
+          type="button"
+          className="terminal-button is-ghost text-xs tracking-[0.12em]"
+          onClick={() => onDownloadPdf(quote.id)}
+        >
+          PDF
         </button>
         <button
           type="button"

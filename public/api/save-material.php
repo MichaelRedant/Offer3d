@@ -41,12 +41,15 @@ $supportmateriaal = !empty($data['supportmateriaal']) ? 1 : 0;
 $manufacturer_id = isset($data['manufacturer_id']) ? (int) $data['manufacturer_id'] : null;
 $stock = isset($data['stock_rollen']) ? (int) $data['stock_rollen'] : 0;
 $marge = isset($data['winstmarge_perc']) ? (float) $data['winstmarge_perc'] : 0;
+$batch_code = $data['batch_code'] ?? null;
+$vervaldatum = $data['vervaldatum'] ?? null;
+$droger_status = $data['droger_status'] ?? 'nvt';
 
 try {
     $stmt = $pdo->prepare("
         INSERT INTO materials 
-        (naam, type, kleur, prijs_per_kg, moet_drogen, supportmateriaal, manufacturer_id, stock_rollen, winstmarge_perc)
-        VALUES (:naam, :type, :kleur, :prijs, :moet_drogen, :supportmateriaal, :manufacturer_id, :stock, :marge)
+        (naam, type, kleur, prijs_per_kg, moet_drogen, supportmateriaal, manufacturer_id, stock_rollen, winstmarge_perc, batch_code, vervaldatum, droger_status)
+        VALUES (:naam, :type, :kleur, :prijs, :moet_drogen, :supportmateriaal, :manufacturer_id, :stock, :marge, :batch_code, :vervaldatum, :droger_status)
     ");
 
     $stmt->execute([
@@ -58,7 +61,10 @@ try {
         ':supportmateriaal' => $supportmateriaal,
         ':manufacturer_id' => $manufacturer_id,
         ':stock' => $stock,
-        ':marge' => $marge
+        ':marge' => $marge,
+        ':batch_code' => $batch_code,
+        ':vervaldatum' => $vervaldatum,
+        ':droger_status' => $droger_status,
     ]);
 
     $id = $pdo->lastInsertId();

@@ -13,7 +13,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 try {
     $stmt = $pdo->prepare("
-        SELECT q.id, q.datum, q.totaal_bruto, q.totaal_netto, q.totaal_btw, 
+        SELECT q.id, q.datum, q.totaal_bruto, q.totaal_netto, q.totaal_btw,
+               q.status,
                c.naam AS klant_naam, c.bedrijf
         FROM quotes q
         JOIN clients c ON q.client_id = c.id

@@ -23,14 +23,36 @@ try {
             vervoerskost DECIMAL(10,2) NOT NULL DEFAULT 0.00,
             modellerings_tarief_per_uur DECIMAL(10,2) NOT NULL DEFAULT 40.00,
             btw DECIMAL(6,2) NOT NULL DEFAULT 21.00,
-            korting_perc DECIMAL(6,2) NOT NULL DEFAULT 0.00
+            korting_perc DECIMAL(6,2) NOT NULL DEFAULT 0.00,
+            company_name VARCHAR(255) NULL,
+            company_address TEXT NULL,
+            company_email VARCHAR(255) NULL,
+            company_phone VARCHAR(64) NULL,
+            logo_url VARCHAR(512) NULL,
+            vat_number VARCHAR(64) NULL,
+            terms_text TEXT NULL,
+            terms_url VARCHAR(512) NULL
         )
     ");
 
-    $columnCheck = $pdo->query("SHOW COLUMNS FROM settings LIKE 'modellerings_tarief_per_uur'");
-    if ($columnCheck && !$columnCheck->fetch()) {
-        $pdo->exec("ALTER TABLE settings ADD COLUMN modellerings_tarief_per_uur DECIMAL(10,2) NOT NULL DEFAULT 40.00");
-        $pdo->exec("UPDATE settings SET modellerings_tarief_per_uur = 40.00 WHERE modellerings_tarief_per_uur IS NULL");
+    $addColumns = [
+        "modellerings_tarief_per_uur DECIMAL(10,2) NOT NULL DEFAULT 40.00",
+        "company_name VARCHAR(255) NULL",
+        "company_address TEXT NULL",
+        "company_email VARCHAR(255) NULL",
+        "company_phone VARCHAR(64) NULL",
+        "logo_url VARCHAR(512) NULL",
+        "vat_number VARCHAR(64) NULL",
+        "terms_text TEXT NULL",
+        "terms_url VARCHAR(512) NULL"
+    ];
+    foreach ($addColumns as $colDef) {
+        $colName = explode(' ', $colDef)[0];
+        $columnCheck = $pdo->prepare("SHOW COLUMNS FROM settings LIKE ?");
+        $columnCheck->execute([$colName]);
+        if (!$columnCheck->fetch()) {
+            $pdo->exec("ALTER TABLE settings ADD COLUMN $colDef");
+        }
     }
 
     $stmt = $pdo->prepare("SELECT * FROM settings WHERE id = 1");
@@ -47,7 +69,15 @@ try {
                 ? (float) $row['modellerings_tarief_per_uur']
                 : 40.0,
             'btw'                   => (float) $row['btw'],
-            'korting'               => (float) $row['korting_perc']
+            'korting'               => (float) $row['korting_perc'],
+            'companyName'           => $row['company_name'] ?? '',
+            'companyAddress'        => $row['company_address'] ?? '',
+            'companyEmail'          => $row['company_email'] ?? '',
+            'companyPhone'          => $row['company_phone'] ?? '',
+            'logoUrl'               => $row['logo_url'] ?? '',
+            'vatNumber'             => $row['vat_number'] ?? '',
+            'termsText'             => $row['terms_text'] ?? '',
+            'termsUrl'              => $row['terms_url'] ?? '',
         ], JSON_UNESCAPED_UNICODE);
     } else {
         $defaults = [

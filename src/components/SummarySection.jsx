@@ -13,7 +13,7 @@ export default function SummarySection({ summary }) {
     <section className="terminal-card space-y-6">
       <header className="space-y-2">
         <p className="terminal-section-title">Overzicht</p>
-        <h2 className="text-2xl font-semibold tracking-dial uppercase">Offerte samenvatting</h2>
+        <h2 className="text-2xl font-semibold tracking-dial uppercase text-base-soft">Offerte samenvatting</h2>
       </header>
 
       {itemResultaten.length === 0 ? (
@@ -31,11 +31,11 @@ export default function SummarySection({ summary }) {
       <AggregateSummary totals={totals} meta={meta} summary={summary} />
 
       {notes.length > 0 && (
-        <div className="rounded-card border border-gridline/60 bg-base-highlight/20 p-4 space-y-2">
-          <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-gridline">
+        <div className="rounded-card border border-gridline/40 bg-parchment/90 p-4 space-y-2 shadow-terminal-inset">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-base-soft">
             Notities
           </h3>
-          <ul className="space-y-1 text-xs tracking-[0.08em] text-gridline/70">
+          <ul className="space-y-1 text-xs tracking-[0.08em] text-base-soft/90">
             {notes.map((note, idx) => (
               <li key={idx}>- {note}</li>
             ))}
@@ -65,27 +65,27 @@ function ItemSummary({ index, item, kost }) {
   const totals = kost.quote.totals;
 
   return (
-    <article className="rounded-card border border-gridline/60 bg-base-highlight/20 p-4 space-y-3">
+    <article className="rounded-card border border-gridline/40 bg-parchment/90 p-4 space-y-3 shadow-terminal">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold tracking-dial uppercase">
+        <h3 className="text-lg font-semibold tracking-dial uppercase text-base-soft">
           Printstuk {String(index + 1).padStart(2, "0")}
         </h3>
-        <span className="terminal-pill">
+        <span className="terminal-pill text-base-soft">
           {item.aantal} {item.aantal === 1 ? "stuk" : "stuks"}
         </span>
       </div>
 
-      <ul className="space-y-1 text-sm text-gridline/80">
+      <ul className="space-y-1 text-sm text-base-soft/90">
         <li>
-          <span className="font-semibold">Naam:</span> {item.name || "Geen naam"}
+          <span className="font-semibold text-base-soft">Naam:</span> {item.name || "Geen naam"}
         </li>
         <li>
-          <span className="font-semibold">Materiaal:</span>{" "}
+          <span className="font-semibold text-base-soft">Materiaal:</span>{" "}
           {item.filamentType || "Niet opgegeven"}
         </li>
       </ul>
 
-      <div className="grid gap-3 text-xs tracking-[0.08em] text-gridline/70 md:grid-cols-2">
+      <div className="grid gap-3 text-xs tracking-[0.08em] text-base-soft md:grid-cols-2">
         <div className="space-y-1">
           <p className="terminal-label">Per print</p>
           <KeyValue label="Materiaal (raw)" value={perPrint.material_raw} />
@@ -159,7 +159,7 @@ function AggregateSummary({ totals, meta, summary }) {
 
   return (
     <>
-      <div className="space-y-2 text-sm tracking-[0.08em] text-gridline/90">
+      <div className="space-y-2 text-sm tracking-[0.08em] text-base-soft">
         {rows.map((row, idx) =>
           row.separator ? (
             <div key={`sep-${idx}`} className="terminal-divider" />
@@ -175,8 +175,8 @@ function AggregateSummary({ totals, meta, summary }) {
         )}
       </div>
 
-      <div className="rounded-card border border-gridline/50 bg-base-highlight/25 p-4 shadow-terminal-inset space-y-2">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-gridline">
+      <div className="rounded-card border border-gridline/40 bg-parchment/90 p-4 shadow-terminal-inset space-y-2">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-base-soft">
           Winstanalyse
         </h3>
         <SummaryRow
@@ -201,8 +201,8 @@ function AggregateSummary({ totals, meta, summary }) {
 function KeyValue({ label, value, emphasized = false }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span>{label}</span>
-      <span className={emphasized ? "font-semibold text-ink" : ""}>
+      <span className="text-base-soft/90">{label}</span>
+      <span className={emphasized ? "font-semibold text-base-soft" : "text-base-soft/90"}>
         {formatCurrency(value)}
       </span>
     </div>
@@ -216,8 +216,8 @@ const ACCENT_CLASS = {
 };
 
 function SummaryRow({ label, value, accent, emphasized = false }) {
-  const accentClass = accent ? ACCENT_CLASS[accent] ?? "" : "";
-  const emphasisClass = emphasized ? "text-lg font-semibold tracking-[0.12em]" : "";
+  const accentClass = accent ? ACCENT_CLASS[accent] ?? "" : "text-base-soft";
+  const emphasisClass = emphasized ? "text-lg font-semibold tracking-[0.12em] text-base-soft" : "text-base-soft";
 
   const formattedValue =
     typeof value === "number"
@@ -227,9 +227,9 @@ function SummaryRow({ label, value, accent, emphasized = false }) {
         : formatCurrency(value);
 
   return (
-    <div className={`flex items-center justify-between gap-4 ${accentClass} ${emphasisClass}`}>
-      <span>{label}</span>
-      <span>{formattedValue}</span>
+    <div className={`flex items-center justify-between gap-4 ${emphasisClass}`}>
+      <span className="text-base-soft/90">{label}</span>
+      <span className={accentClass}>{formattedValue}</span>
     </div>
   );
 }

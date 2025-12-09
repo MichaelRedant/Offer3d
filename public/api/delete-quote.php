@@ -47,6 +47,11 @@ try {
     echo json_encode(['success' => true]);
 } catch (PDOException $e) {
     $pdo->rollBack();
+    if ($e->getCode() === '23000') {
+        http_response_code(409);
+        echo json_encode(['error' => 'Kan niet verwijderen: offerte is nog gekoppeld. Ontkoppel eerst.']);
+        exit;
+    }
     http_response_code(500);
     echo json_encode(['error' => 'Verwijderen mislukt: ' . $e->getMessage()]);
 }

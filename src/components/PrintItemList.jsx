@@ -231,21 +231,44 @@ export default function PrintItemList({
               />
 
               {item.modelleringNodig && (
-                <Field
-                  label="Modelleringstijd (uren)"
-                  type="number"
-                  min={0}
-                  step="0.1"
-                  value={item.modellering_uur ?? ""}
-                  onChange={(value) =>
-                    onUpdateItem(index, {
-                      ...item,
-                      modellering_uur: parseFloat(value) || 0,
-                    })
-                  }
-                  wrapperClassName="md:col-span-2"
-                />
-              )}
+                <div className="md:col-span-2 grid grid-cols-2 gap-3">
+                  <Field
+                label="Modellering (uren)"
+                type="number"
+                min={0}
+                step="1"
+                value={Math.floor(Number(item.modellering_uur ?? 0))}
+                onChange={(value) => {
+                  const hours = Math.max(0, parseInt(value, 10) || 0);
+                  const minutes = Math.round(((Number(item.modellering_uur ?? 0) % 1) * 60)) || 0;
+                  const total = hours + minutes / 60;
+                  onUpdateItem(index, {
+                    ...item,
+                    modelleringNodig: hours > 0 || minutes > 0 || item.modelleringNodig,
+                    modellering_uur: total,
+                  });
+                }}
+              />
+              <Field
+                label="Modellering (minuten)"
+                type="number"
+                    min={0}
+                    max={59}
+                    step="1"
+                value={Math.round(((Number(item.modellering_uur ?? 0) % 1) * 60)) || 0}
+                onChange={(value) => {
+                  const minutes = Math.min(59, Math.max(0, parseInt(value, 10) || 0));
+                  const hours = Math.floor(Number(item.modellering_uur ?? 0)) || 0;
+                  const total = hours + minutes / 60;
+                  onUpdateItem(index, {
+                    ...item,
+                    modelleringNodig: hours > 0 || minutes > 0 || item.modelleringNodig,
+                    modellering_uur: total,
+                  });
+                }}
+              />
+            </div>
+          )}
 
               <div className="md:col-span-2 flex flex-wrap gap-6 pt-2 text-sm text-gridline/80">
                 <label className="inline-flex items-center gap-3 tracking-[0.08em] uppercase">

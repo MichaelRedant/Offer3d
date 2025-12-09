@@ -14,6 +14,9 @@ const EMPTY_FORM = {
   manufacturer_id: "",
   stock_rollen: 0,
   winstmarge_perc: 0,
+  batch_code: "",
+  vervaldatum: "",
+  droger_status: "nvt",
 };
 
 const EMPTY_MANUFACTURER = {
@@ -102,7 +105,16 @@ export default function MaterialManager() {
         throw new Error("Fout bij ophalen materialen");
       }
       const data = await response.json();
-      setMaterials(Array.isArray(data) ? data : []);
+      const mapped = Array.isArray(data)
+        ? data.map((material) => ({
+            ...material,
+            manufacturer_id: material.manufacturer_id ?? "",
+            batch_code: material.batch_code ?? "",
+            vervaldatum: material.vervaldatum ?? "",
+            droger_status: material.droger_status ?? "nvt",
+          }))
+        : [];
+      setMaterials(mapped);
     } catch (error) {
       console.error("Fout bij laden materialen:", error);
       showFeedback("error", "Materialen konden niet geladen worden.");
@@ -151,6 +163,9 @@ export default function MaterialManager() {
       manufacturer_id: material.manufacturer_id ?? "",
       stock_rollen: material.stock_rollen ?? 0,
       winstmarge_perc: material.winstmarge_perc ?? 0,
+      batch_code: material.batch_code ?? "",
+      vervaldatum: material.vervaldatum ?? "",
+      droger_status: material.droger_status ?? "nvt",
     });
     setIsEditing(true);
     showFeedback("info", `Materiaal "${material.naam}" klaar om te bewerken.`);
@@ -377,16 +392,50 @@ export default function MaterialManager() {
                 value={form.stock_rollen}
                 onChange={handleChange}
               />
-              <InputField
-                label="Materiaalwinstmarge"
-                name="winstmarge_perc"
-                type="number"
-                min="0"
-                value={form.winstmarge_perc}
-                onChange={handleChange}
-                suffix="%"
-              />
-            </div>
+            <InputField
+              label="Materiaalwinstmarge"
+              name="winstmarge_perc"
+              type="number"
+              min="0"
+              value={form.winstmarge_perc}
+              onChange={handleChange}
+              suffix="%"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <InputField
+              label="Batch/lot"
+              name="batch_code"
+              value={form.batch_code}
+              onChange={handleChange}
+              placeholder="Optioneel batchnummer"
+            />
+            <InputField
+              label="Vervaldatum"
+              name="vervaldatum"
+              type="date"
+              value={form.vervaldatum}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="terminal-label" htmlFor="droger_status">
+              Droger status
+            </label>
+            <select
+              id="droger_status"
+              name="droger_status"
+              value={form.droger_status}
+              onChange={handleChange}
+              className="terminal-input"
+            >
+              <option value="nvt">n.v.t.</option>
+              <option value="nodig">Nodig</option>
+              <option value="in_gebruik">In gebruik</option>
+            </select>
+          </div>
 
             <div className="flex flex-wrap gap-4 text-sm text-gridline/80">
               <label className="inline-flex items-center gap-2 tracking-[0.08em] uppercase">
@@ -556,6 +605,16 @@ function InputField({ label, name, onChange, suffix, className = "", ...inputPro
 }
 
 function MaterialCard({ material, onEdit, onDelete }) {
+  const lowStock = Number(material.stock_rollen ?? 0) <= 1;
+  const vervaltBinnenkort = material.vervaldatum
+    ? (() => {
+        const today = new Date();
+        const expiry = new Date(material.vervaldatum);
+        const diff = (expiry - today) / (1000 * 60 * 60 * 24);
+        return diff <= 30;
+      })()
+    : false;
+
   return (
     <article className="rounded-card border border-gridline/50 bg-parchment/80 p-4 shadow-terminal-inset space-y-3">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -587,11 +646,33 @@ function MaterialCard({ material, onEdit, onDelete }) {
           <dt>Stock</dt>
           <dd>{material.stock_rollen ?? 0} rollen</dd>
         </div>
+        {material.batch_code && (
+          <div className="flex justify-between gap-3">
+            <dt>Batch</dt>
+            <dd>{material.batch_code}</dd>
+          </div>
+        )}
+        {material.vervaldatum && (
+          <div className="flex justify-between gap-3">
+            <dt>Vervaldatum</dt>
+            <dd>{material.vervaldatum}</dd>
+          </div>
+        )}
       </dl>
 
       <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.12em] text-gridline/70">
         {material.moet_drogen && <span className="terminal-pill">Droging nodig</span>}
         {material.supportmateriaal && <span className="terminal-pill">Supportmateriaal</span>}
+        {material.droger_status === "nodig" && (
+          <span className="terminal-pill border-signal-amber/60 text-signal-amber">Droger nodig</span>
+        )}
+        {material.droger_status === "in_gebruik" && (
+          <span className="terminal-pill border-accent/60 text-accent">In droger</span>
+        )}
+        {lowStock && <span className="terminal-pill border-signal-red/60 text-signal-red">Lage voorraad</span>}
+        {vervaltBinnenkort && (
+          <span className="terminal-pill border-primary/60 text-primary">Vervalt binnen 30d</span>
+        )}
       </div>
 
       <footer className="flex flex-wrap gap-2">

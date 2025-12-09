@@ -33,6 +33,14 @@ try {
     $stmt->execute([':id' => $id]);
 
     echo json_encode(['success' => true]);
+} catch (PDOException $e) {
+    if ($e->getCode() === '23000') {
+        http_response_code(409);
+        echo json_encode(['error' => 'Kan niet verwijderen: materiaal is nog gekoppeld. Ontkoppel eerst in offertes of andere entiteiten.']);
+        exit;
+    }
+    http_response_code(500);
+    echo json_encode(['error' => 'Verwijderen mislukt: ' . $e->getMessage()]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Verwijderen mislukt: ' . $e->getMessage()]);

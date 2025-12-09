@@ -20,7 +20,23 @@ if (!$input || !is_array($input)) {
 }
 
 // Vereiste velden controleren
-$required = ['standaardWinstmarge', 'elektriciteitsprijs', 'vasteStartkost', 'vervoerskost', 'modelleringTarief', 'btw', 'korting'];
+$required = [
+    'standaardWinstmarge',
+    'elektriciteitsprijs',
+    'vasteStartkost',
+    'vervoerskost',
+    'modelleringTarief',
+    'btw',
+    'korting',
+    'companyName',
+    'companyAddress',
+    'companyEmail',
+    'companyPhone',
+    'logoUrl',
+    'vatNumber',
+    'termsText',
+    'termsUrl',
+];
 foreach ($required as $field) {
     if (!isset($input[$field]) || !is_numeric($input[$field])) {
         http_response_code(400);
@@ -40,14 +56,36 @@ $pdo->exec("
         vervoerskost DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         modellerings_tarief_per_uur DECIMAL(10,2) NOT NULL DEFAULT 40.00,
         btw DECIMAL(6,2) NOT NULL DEFAULT 21.00,
-        korting_perc DECIMAL(6,2) NOT NULL DEFAULT 0.00
+        korting_perc DECIMAL(6,2) NOT NULL DEFAULT 0.00,
+        company_name VARCHAR(255) NULL,
+        company_address TEXT NULL,
+        company_email VARCHAR(255) NULL,
+        company_phone VARCHAR(64) NULL,
+        logo_url VARCHAR(512) NULL,
+        vat_number VARCHAR(64) NULL,
+        terms_text TEXT NULL,
+        terms_url VARCHAR(512) NULL
     )
 ");
 
-$columnCheck = $pdo->query("SHOW COLUMNS FROM settings LIKE 'modellerings_tarief_per_uur'");
-if ($columnCheck && $columnCheck->rowCount() === 0) {
-    $pdo->exec("ALTER TABLE settings ADD COLUMN modellerings_tarief_per_uur DECIMAL(10,2) NOT NULL DEFAULT 40.00");
-    $pdo->exec("UPDATE settings SET modellerings_tarief_per_uur = 40.00 WHERE modellerings_tarief_per_uur IS NULL");
+$addColumns = [
+    "modellerings_tarief_per_uur DECIMAL(10,2) NOT NULL DEFAULT 40.00",
+    "company_name VARCHAR(255) NULL",
+    "company_address TEXT NULL",
+    "company_email VARCHAR(255) NULL",
+    "company_phone VARCHAR(64) NULL",
+    "logo_url VARCHAR(512) NULL",
+    "vat_number VARCHAR(64) NULL",
+    "terms_text TEXT NULL",
+    "terms_url VARCHAR(512) NULL"
+];
+foreach ($addColumns as $colDef) {
+    $colName = explode(' ', $colDef)[0];
+    $columnCheck = $pdo->prepare("SHOW COLUMNS FROM settings LIKE ?");
+    $columnCheck->execute([$colName]);
+    if (!$columnCheck->fetch()) {
+        $pdo->exec("ALTER TABLE settings ADD COLUMN $colDef");
+    }
 }
 
 $stmt = $pdo->prepare("
@@ -59,7 +97,15 @@ $stmt = $pdo->prepare("
         vervoerskost,
         modellerings_tarief_per_uur,
         btw,
-        korting_perc
+        korting_perc,
+        company_name,
+        company_address,
+        company_email,
+        company_phone,
+        logo_url,
+        vat_number,
+        terms_text,
+        terms_url
     ) VALUES (
         1,
         :standaard,
@@ -68,7 +114,15 @@ $stmt = $pdo->prepare("
         :vervoerskost,
         :modellering,
         :btw,
-        :korting
+        :korting,
+        :companyName,
+        :companyAddress,
+        :companyEmail,
+        :companyPhone,
+        :logoUrl,
+        :vatNumber,
+        :termsText,
+        :termsUrl
     )
 ");
 
@@ -80,6 +134,14 @@ $success = $stmt->execute([
     ':modellering' => (float) $input['modelleringTarief'],
     ':btw' => (float) $input['btw'],
     ':korting' => (float) $input['korting'],
+    ':companyName' => $input['companyName'],
+    ':companyAddress' => $input['companyAddress'],
+    ':companyEmail' => $input['companyEmail'],
+    ':companyPhone' => $input['companyPhone'],
+    ':logoUrl' => $input['logoUrl'],
+    ':vatNumber' => $input['vatNumber'],
+    ':termsText' => $input['termsText'],
+    ':termsUrl' => $input['termsUrl'],
 ]);
 
 if ($success) {

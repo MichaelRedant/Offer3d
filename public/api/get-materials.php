@@ -38,7 +38,10 @@ try {
             'manufacturer_id' => isset($row['manufacturer_id']) ? (int) $row['manufacturer_id'] : null,
             'stock_rollen' => (int) $row['stock_rollen'],
             'winstmarge_perc' => (float) $row['winstmarge_perc'],
-            'supportmateriaal' => (bool) $row['supportmateriaal']
+            'supportmateriaal' => (bool) $row['supportmateriaal'],
+            'batch_code' => $row['batch_code'] ?? null,
+            'vervaldatum' => $row['vervaldatum'] ?? null,
+            'droger_status' => $row['droger_status'] ?? 'nvt',
         ];
     }
 

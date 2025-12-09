@@ -1,5 +1,17 @@
 <?php
+require_once __DIR__ . '/auth.php';
 // db.php
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
+// Log naar lokale file
+$logDir = __DIR__ . '/logs';
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0755, true);
+}
+ini_set('log_errors', 1);
+ini_set('error_log', $logDir . '/php-error.log');
+
 $config = require __DIR__ . '/env.php';
 
 $host = $config['DB_HOST'];

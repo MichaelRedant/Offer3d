@@ -28,6 +28,8 @@ try {
         UPDATE quotes SET
             client_id = ?,
             datum = ?,
+            status = ?,
+            status_updated_at = NOW(),
             standaard_winstmarge_perc = ?,
             gebruik_geen_marge = ?,
             gebruik_item_marges = ?,
@@ -46,6 +48,7 @@ try {
     $stmt->execute([
         intval($data['client_id']),
         $data['datum'],
+        $data['status'] ?? 'draft',
         floatval($data['standaard_winstmarge_perc']),
         intval(!empty($data['gebruik_geen_marge'])),
         intval(!empty($data['gebruik_item_marges'])),

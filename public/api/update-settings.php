@@ -24,7 +24,23 @@ if (!$data || !is_array($data)) {
 }
 
 // ✅ Check op aanwezigheid keys (0 is geldig, dus check op bestaan)
-$required = ['standaardWinstmarge', 'elektriciteitsprijs', 'vasteStartkost', 'vervoerskost', 'modelleringTarief', 'btw', 'korting'];
+$required = [
+    'standaardWinstmarge',
+    'elektriciteitsprijs',
+    'vasteStartkost',
+    'vervoerskost',
+    'modelleringTarief',
+    'btw',
+    'korting',
+    'companyName',
+    'companyAddress',
+    'companyEmail',
+    'companyPhone',
+    'logoUrl',
+    'vatNumber',
+    'termsText',
+    'termsUrl',
+];
 foreach ($required as $key) {
     if (!array_key_exists($key, $data)) {
         http_response_code(400);
@@ -34,10 +50,24 @@ foreach ($required as $key) {
 }
 
 try {
-    $columnCheck = $pdo->query("SHOW COLUMNS FROM settings LIKE 'modellerings_tarief_per_uur'");
-    if ($columnCheck && !$columnCheck->fetch()) {
-        $pdo->exec("ALTER TABLE settings ADD COLUMN modellerings_tarief_per_uur DECIMAL(10,2) NOT NULL DEFAULT 40.00");
-        $pdo->exec("UPDATE settings SET modellerings_tarief_per_uur = 40.00 WHERE modellerings_tarief_per_uur IS NULL");
+    $addColumns = [
+        "modellerings_tarief_per_uur DECIMAL(10,2) NOT NULL DEFAULT 40.00",
+        "company_name VARCHAR(255) NULL",
+        "company_address TEXT NULL",
+        "company_email VARCHAR(255) NULL",
+        "company_phone VARCHAR(64) NULL",
+        "logo_url VARCHAR(512) NULL",
+        "vat_number VARCHAR(64) NULL",
+        "terms_text TEXT NULL",
+        "terms_url VARCHAR(512) NULL"
+    ];
+    foreach ($addColumns as $colDef) {
+        $colName = explode(' ', $colDef)[0];
+        $columnCheck = $pdo->prepare("SHOW COLUMNS FROM settings LIKE ?");
+        $columnCheck->execute([$colName]);
+        if (!$columnCheck->fetch()) {
+            $pdo->exec("ALTER TABLE settings ADD COLUMN $colDef");
+        }
     }
 
     $stmt = $pdo->prepare("
@@ -49,7 +79,15 @@ try {
             vervoerskost,
             modellerings_tarief_per_uur,
             btw,
-            korting_perc
+            korting_perc,
+            company_name,
+            company_address,
+            company_email,
+            company_phone,
+            logo_url,
+            vat_number,
+            terms_text,
+            terms_url
         ) VALUES (
             1,
             :standaardWinstmarge,
@@ -58,7 +96,15 @@ try {
             :vervoerskost,
             :modelleringTarief,
             :btw,
-            :korting
+            :korting,
+            :companyName,
+            :companyAddress,
+            :companyEmail,
+            :companyPhone,
+            :logoUrl,
+            :vatNumber,
+            :termsText,
+            :termsUrl
         )
         ON DUPLICATE KEY UPDATE
             standaard_winstmarge_perc = VALUES(standaard_winstmarge_perc),
@@ -67,7 +113,15 @@ try {
             vervoerskost = VALUES(vervoerskost),
             modellerings_tarief_per_uur = VALUES(modellerings_tarief_per_uur),
             btw = VALUES(btw),
-            korting_perc = VALUES(korting_perc)
+            korting_perc = VALUES(korting_perc),
+            company_name = VALUES(company_name),
+            company_address = VALUES(company_address),
+            company_email = VALUES(company_email),
+            company_phone = VALUES(company_phone),
+            logo_url = VALUES(logo_url),
+            vat_number = VALUES(vat_number),
+            terms_text = VALUES(terms_text),
+            terms_url = VALUES(terms_url)
     ");
 
     $stmt->execute([
@@ -78,6 +132,14 @@ try {
         ':modelleringTarief' => (float)$data['modelleringTarief'],
         ':btw' => (float)$data['btw'],
         ':korting' => (float)$data['korting'],
+        ':companyName' => $data['companyName'],
+        ':companyAddress' => $data['companyAddress'],
+        ':companyEmail' => $data['companyEmail'],
+        ':companyPhone' => $data['companyPhone'],
+        ':logoUrl' => $data['logoUrl'],
+        ':vatNumber' => $data['vatNumber'],
+        ':termsText' => $data['termsText'],
+        ':termsUrl' => $data['termsUrl'],
     ]);
 
     echo json_encode(['success' => true]);
