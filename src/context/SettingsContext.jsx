@@ -1,9 +1,10 @@
 import React, { createContext, useCallback, useEffect, useState } from 'react';
+import { baseUrl } from '../lib/constants';
 
 export const SettingsContext = createContext();
 
-const ENDPOINT = `${import.meta.env.BASE_URL}api/update-settings.php`;
-const FETCH_ENDPOINT = `${import.meta.env.BASE_URL}api/get-settings.php`;
+const ENDPOINT = `${baseUrl}/update-settings.php`;
+const FETCH_ENDPOINT = `${baseUrl}/get-settings.php`;
 
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(null);

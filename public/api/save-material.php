@@ -18,6 +18,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/db.php';
 
+function columnExists(PDO $pdo, string $table, string $column): bool
+{
+    $stmt = $pdo->prepare("SHOW COLUMNS FROM `$table` LIKE :column");
+    $stmt->execute([':column' => $column]);
+    return $stmt->fetchColumn() !== false;
+}
+
+// Zorg dat bestel_url kolom bestaat
+try {
+    if (!columnExists($pdo, 'materials', 'bestel_url')) {
+        $pdo->exec("ALTER TABLE materials ADD COLUMN bestel_url VARCHAR(255) NULL AFTER droger_status");
+    }
+} catch (Exception $e) {
+    // Niet fataal voor backward compatibility; doorgaan zonder kolom
+}
+
 // JSON input ophalen
 $data = json_decode(file_get_contents("php://input"), true);
 
@@ -44,12 +60,13 @@ $marge = isset($data['winstmarge_perc']) ? (float) $data['winstmarge_perc'] : 0;
 $batch_code = $data['batch_code'] ?? null;
 $vervaldatum = $data['vervaldatum'] ?? null;
 $droger_status = $data['droger_status'] ?? 'nvt';
+$bestel_url = isset($data['bestel_url']) ? trim($data['bestel_url']) : null;
 
 try {
     $stmt = $pdo->prepare("
         INSERT INTO materials 
-        (naam, type, kleur, prijs_per_kg, moet_drogen, supportmateriaal, manufacturer_id, stock_rollen, winstmarge_perc, batch_code, vervaldatum, droger_status)
-        VALUES (:naam, :type, :kleur, :prijs, :moet_drogen, :supportmateriaal, :manufacturer_id, :stock, :marge, :batch_code, :vervaldatum, :droger_status)
+        (naam, type, kleur, prijs_per_kg, moet_drogen, supportmateriaal, manufacturer_id, stock_rollen, winstmarge_perc, batch_code, vervaldatum, droger_status, bestel_url)
+        VALUES (:naam, :type, :kleur, :prijs, :moet_drogen, :supportmateriaal, :manufacturer_id, :stock, :marge, :batch_code, :vervaldatum, :droger_status, :bestel_url)
     ");
 
     $stmt->execute([
@@ -65,6 +82,7 @@ try {
         ':batch_code' => $batch_code,
         ':vervaldatum' => $vervaldatum,
         ':droger_status' => $droger_status,
+        ':bestel_url' => $bestel_url ?: null,
     ]);
 
     $id = $pdo->lastInsertId();
@@ -81,7 +99,8 @@ try {
             'supportmateriaal' => (bool) $supportmateriaal,
             'manufacturer_id' => $manufacturer_id,
             'stock_rollen' => $stock,
-            'winstmarge_perc' => $marge
+            'winstmarge_perc' => $marge,
+            'bestel_url' => $bestel_url,
         ]
     ]);
 } catch (Exception $e) {

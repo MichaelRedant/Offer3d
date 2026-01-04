@@ -249,8 +249,8 @@ export default function SettingsPage() {
       <section className="terminal-card space-y-4">
         <p className="terminal-section-title">Huidige parameters</p>
         <div className="terminal-grid md:grid-cols-4">
-          {overviewMetrics.map((metric) => (
-            <MetricBadge key={metric.key} {...metric} />
+          {overviewMetrics.map(({ key, ...metricProps }) => (
+            <MetricBadge key={key} {...metricProps} />
           ))}
         </div>
         <p className="terminal-note">

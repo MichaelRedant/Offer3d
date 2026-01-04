@@ -20,7 +20,7 @@ export default function Home() {
   const { settings, loading: settingsLoading } = useContext(SettingsContext);
   const [overview, setOverview] = useState({ quotes: [], materials: [], clients: [] });
   const [status, setStatus] = useState({ loading: true, errors: [] });
-  const apiBase = `${import.meta.env.BASE_URL}api/`;
+  const apiBase = baseUrl;
 
   useEffect(() => {
     let active = true;
@@ -28,9 +28,9 @@ export default function Home() {
     async function fetchAll() {
       setStatus({ loading: true, errors: [] });
       const endpoints = [
-        { url: `${apiBase}get-quotes.php`, key: "quotes" },
-        { url: `${apiBase}get-materials.php`, key: "materials" },
-        { url: `${apiBase}get-clients.php`, key: "clients" },
+        { url: `${apiBase}/get-quotes.php`, key: "quotes" },
+        { url: `${apiBase}/get-materials.php`, key: "materials" },
+        { url: `${apiBase}/get-clients.php`, key: "clients" },
       ];
 
       const results = await Promise.allSettled(

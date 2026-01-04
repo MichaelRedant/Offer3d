@@ -1,4 +1,14 @@
 <?php
+// CORS preflight + headers
+$allowedHeaders = 'Content-Type, Authorization, X-API-KEY, X-CSRF, X-CSRF-Token';
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: $allowedHeaders");
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 // Eenvoudige API-key check voor alle endpoints.
 $configPath = __DIR__ . '/env.php';
 $apiKey = null;
@@ -6,6 +16,8 @@ if (file_exists($configPath)) {
     $cfg = include $configPath;
     $apiKey = $cfg['API_KEY'] ?? null;
 }
+
+$requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if ($apiKey) {
     $provided = null;
@@ -25,7 +37,7 @@ if ($apiKey) {
 }
 
 // CSRF/double-submit bescherming voor niet-GET requests
-if ($_SERVER['REQUEST_METHOD'] !== 'GET' && $_SERVER['REQUEST_METHOD'] !== 'OPTIONS') {
+if ($requestMethod !== 'GET' && $requestMethod !== 'OPTIONS') {
     $csrfHeader = $_SERVER['HTTP_X_CSRF'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
     if ($apiKey && $csrfHeader !== $apiKey) {
         http_response_code(403);

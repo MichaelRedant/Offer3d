@@ -6,34 +6,34 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#f8c46a',          // warme amber accentkleur met hoger contrast
-        accent: '#78b4b2',           // koel contrast voor links/acties
-        background: '#131210',       // diep charcoal basis
+        primary: '#1A73E8',          // Futuristic Blue – vertrouwen en innovatie
+        accent: '#2EE8B7',           // Aqua Green – fris en modern
+        background: '#F9FAFB',       // lichte, cleane basis
         base: {
-          DEFAULT: '#131210',
-          soft: '#1b1a17',
-          highlight: '#23221c',
+          DEFAULT: '#F9FAFB',
+          soft: '#F3F4F6',
+          highlight: '#E5E7EB',
         },
         parchment: {
-          DEFAULT: '#e4d6b4',
-          light: '#f1e7cb',
-          deep: '#c6b389',
+          DEFAULT: '#ffffff',
+          light: '#ffffff',
+          deep: '#eef2f8',
         },
         ink: {
-          DEFAULT: '#fdf4db',
-          muted: '#dacdb3',
-          faint: '#a99c85',
+          DEFAULT: '#111827',        // bijna zwart voor hoog contrast
+          muted: '#1f2937',
+          faint: '#4B5563',
         },
-        gridline: '#2d281f',
+        gridline: '#E5E7EB',
         signal: {
-          green: '#94d477',
-          red: '#d9705f',
-          blue: '#72a9d1',
-          amber: '#f4c870',
+          green: '#16c79a',
+          red: '#ef4444',
+          blue: '#3b82f6',
+          amber: '#f59e0b',
         },
       },
       fontFamily: {
-        sans: ['"IBM Plex Mono"', '"Fira Code"', '"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        sans: ['"Inter"', '"Poppins"', '"Source Sans Pro"', 'system-ui', 'ui-sans-serif', 'Arial', 'sans-serif'],
         mono: ['"IBM Plex Mono"', '"Fira Code"', '"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       boxShadow: {

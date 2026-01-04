@@ -1,21 +1,15 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
 
 const NAV_LINKS = [
   { to: "/", label: "Dashboard", exact: true },
   { to: "/offerte", label: "Nieuwe Offerte" },
   { to: "/offertes", label: "Offertes" },
+  { to: "/materialen", label: "Filamentbeheer" },
   { to: "/instellingen", label: "Instellingen" },
 ];
 
 export default function Layout({ children }) {
   const location = useLocation();
-  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "default");
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("theme-hawkins", theme === "hawkins");
-    localStorage.setItem("theme", theme);
-  }, [theme]);
 
   return (
     <div className="terminal-shell">
@@ -39,14 +33,6 @@ export default function Layout({ children }) {
               {link.label}
             </NavLink>
           ))}
-          <select
-            value={theme}
-            onChange={(e) => setTheme(e.target.value)}
-            className="terminal-input w-auto text-[0.75rem] px-2 py-1"
-          >
-            <option value="default">Default Theme</option>
-            <option value="hawkins">Hawkins Synth</option>
-          </select>
         </nav>
       </header>
 

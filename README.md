@@ -74,8 +74,15 @@ npm run build
 npm run preview
 ```
 
-Standaard draait de app op <http://localhost:5173/>. De PHP API’s gebruiken de paden onder `public/api`.  
-Pas indien nodig de databasecredenties aan via `public/api/env.php`.
+Standaard draait de app op <http://localhost:5173/>. De PHP API?s gebruiken de paden onder `public/api`.
+
+### Omgevingsvariabelen
+
+- Kopieer `.env.example` naar `.env.local` (voor lokale builds) of stel de variabelen in via de hostingomgeving.  
+- Vereist: `OFFR3D_DB_HOST`, `OFFR3D_DB_NAME`, `OFFR3D_DB_USER`, `OFFR3D_DB_PASS`, `OFFR3D_API_KEY`.  
+- De frontend verwacht dezelfde API-key in `VITE_API_KEY` zodat fetches automatisch de juiste Authorization/CSRF headers meesturen.  
+- `public/api/env.php` probeert automatisch `.env`, `.env.local` en `.env.server` in te laden; server-side env vars hebben altijd voorrang.  
+- Commit nooit je daadwerkelijke secrets?`.env.local` staat op de `.gitignore` lijst.
 
 ---
 
@@ -116,11 +123,18 @@ Alle endpoints bevinden zich in `public/api`. Belangrijkste routes:
 | `get-quotes.php` / `get-quote-detail.php` | Lijst & detail van offertes |
 | `save-quote.php` / `update-quote.php` / `delete-quote.php` | CRUD-acties op offertes |
 | `get-materials.php` / `save-material.php` / `update-material.php` / `delete-material.php` | Materiaalbeheer |
+| `get-spools.php` / `save-spool.php` / `update-spool.php` / `delete-spool.php` | Rolvoorraad per materiaal |
 | `get-manufacturers.php`, `add-manufacturer.php`, … | Fabrikantbeheer |
 | `get-clients.php`, `save-client.php`, … | Klantbeheer |
 
 De endpoints verwachten JSON-requests en retourneren JSON-responses.  
 `SettingsContext` pakt automatisch fallback-waarden op wanneer er nog geen instellingen zijn opgeslagen.
+
+### Database-migratie: filamentrollen
+
+De rolvoorraad gebruikt een aparte tabel `material_spools`. Voeg deze toe met het script
+`public/api/sql/material_spools.sql` (eenmalig in de Offr3d database). De nieuwe API-endpoints werken
+zonder verdere wijzigingen zodra de tabel bestaat.
 
 ---
 
