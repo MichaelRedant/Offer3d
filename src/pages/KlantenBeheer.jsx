@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import TerminalBackButton from "../components/TerminalBackButton";
 import { baseUrl } from "../lib/constants";
@@ -12,6 +13,12 @@ const EMPTY_FORM = {
   btw_nummer: "",
   adres: "",
   telefoon: "",
+  street: "",
+  postal_code: "",
+  city: "",
+  country_code: "BE",
+  peppol_endpoint_id: "",
+  peppol_scheme: "9956",
 };
 
 const STAT_CARDS = [
@@ -50,6 +57,8 @@ export default function KlantenBeheer() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [sortKey, setSortKey] = useState("name-asc");
   const { showToast } = useToast();
+  const [viesStatus, setViesStatus] = useState(null);
+  const navigate = useNavigate();
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
@@ -91,6 +100,12 @@ export default function KlantenBeheer() {
       btw_nummer: form.btw_nummer?.trim() ?? "",
       adres: form.adres?.trim() ?? "",
       telefoon: form.telefoon?.trim() ?? "",
+      street: form.street?.trim() ?? "",
+      postal_code: form.postal_code?.trim() ?? "",
+      city: form.city?.trim() ?? "",
+      country_code: form.country_code?.trim() || "BE",
+      peppol_endpoint_id: form.peppol_endpoint_id?.trim() ?? "",
+      peppol_scheme: form.peppol_scheme?.trim() ?? "9956",
     };
 
     try {
@@ -120,8 +135,59 @@ export default function KlantenBeheer() {
     }
   };
 
+  const handleViesLookup = async () => {
+    const vat = form.btw_nummer?.trim();
+    if (!vat) {
+      showToast({ type: "warning", message: "Vul eerst een BTW-nummer in." });
+      return;
+    }
+    setViesStatus({ state: "loading", message: "VIES check..." });
+    try {
+      const response = await fetch(`${baseUrl}/check-vat.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vat_number: vat, country_code: form.country_code || undefined }),
+      });
+      const result = await response.json();
+      if (!response.ok || result.error) {
+        throw new Error(result.error || "VIES controle mislukt.");
+      }
+      const address = result.address || "";
+      let street = form.street;
+      let postal = form.postal_code;
+      let city = form.city;
+      if (address) {
+        const lines = address.split("\n").map((l) => l.trim()).filter(Boolean);
+        if (lines.length >= 2) {
+          street = street || lines[0];
+          const last = lines[lines.length - 1];
+          const m = last.match(/(\d{3,10})\s+(.*)/);
+          if (m) {
+            postal = postal || m[1];
+            city = city || m[2];
+          } else {
+            city = city || last;
+          }
+        }
+      }
+      setForm((prev) => ({
+        ...prev,
+        bedrijf: prev.bedrijf || result.name || prev.bedrijf,
+        street: street || prev.street,
+        postal_code: postal || prev.postal_code,
+        city: city || prev.city,
+        country_code: result.countryCode || prev.country_code || "BE",
+      }));
+      setViesStatus({ state: result.valid ? "valid" : "invalid", message: result.valid ? "Geldig volgens VIES." : "Ongeldig volgens VIES." });
+      showToast({ type: result.valid ? "success" : "warning", message: viesStatus?.message || "VIES resultaat bijgewerkt." });
+    } catch (error) {
+      setViesStatus({ state: "error", message: error.message });
+      showToast({ type: "error", message: error.message || "VIES check mislukt." });
+    }
+  };
+
   const handleEdit = (client) => {
-    setForm({ ...client, id: client.id ?? null });
+    setForm({ ...EMPTY_FORM, ...client, id: client.id ?? null });
     setIsEditing(true);
   };
 
@@ -215,10 +281,34 @@ export default function KlantenBeheer() {
             <Input label="E-mail" name="email" type="email" value={form.email} onChange={handleChange} />
             <Input label="Bedrijf" name="bedrijf" value={form.bedrijf} onChange={handleChange} />
             <Input label="BTW-nummer" name="btw_nummer" value={form.btw_nummer} onChange={handleChange} />
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className="terminal-button is-ghost text-xs tracking-[0.12em]" onClick={handleViesLookup}>
+                VIES check
+              </button>
+              {viesStatus && (
+                <span
+                  className={`terminal-pill text-xs ${
+                    viesStatus.state === "valid"
+                      ? "text-signal-green border-signal-green/60"
+                      : viesStatus.state === "invalid"
+                        ? "text-signal-red border-signal-red/60"
+                        : viesStatus.state === "error"
+                          ? "text-signal-red border-signal-red/60"
+                          : "text-gridline/80"
+                  }`}
+                >
+                  {viesStatus.message}
+                </span>
+              )}
+            </div>
             <Input label="Telefoon" name="telefoon" value={form.telefoon} onChange={handleChange} />
+            <Input label="Straat en nr." name="street" value={form.street} onChange={handleChange} />
+            <Input label="Postcode" name="postal_code" value={form.postal_code} onChange={handleChange} />
+            <Input label="Gemeente / Stad" name="city" value={form.city} onChange={handleChange} />
+            <Input label="Landcode" name="country_code" value={form.country_code} onChange={handleChange} />
             <div className="md:col-span-2 space-y-2">
               <label className="terminal-label" htmlFor="adres">
-                Adres
+                Adres (vrij veld)
               </label>
               <textarea
                 id="adres"
@@ -229,6 +319,18 @@ export default function KlantenBeheer() {
                 onChange={handleChange}
               />
             </div>
+            <Input
+              label="Peppol ID (optioneel)"
+              name="peppol_endpoint_id"
+              value={form.peppol_endpoint_id}
+              onChange={handleChange}
+            />
+            <Input
+              label="Peppol scheme"
+              name="peppol_scheme"
+              value={form.peppol_scheme}
+              onChange={handleChange}
+            />
           </div>
 
           <div className="flex justify-end gap-3">
@@ -344,23 +446,33 @@ export default function KlantenBeheer() {
               </thead>
               <tbody className="divide-y divide-gridline/30">
                 {sortedClients.map((client) => (
-                  <tr key={client.id}>
+                  <tr key={client.id} className="hover:bg-parchment/70 transition-colors">
                     <td className="py-3 pr-4">
-                      <p className="font-semibold tracking-[0.08em] uppercase">
-                        {highlightMatch(client.naam || "Onbekend", normalizedSearch)}
-                      </p>
-                      {client.bedrijf && (
-                        <p className="text-xs text-gridline/70">
-                          {highlightMatch(client.bedrijf, normalizedSearch)}
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/klanten/${client.id}`)}
+                        className="text-left w-full hover:text-primary transition-colors"
+                        title="Bekijk klantstatistieken"
+                      >
+                        <p className="font-semibold tracking-[0.08em] uppercase">
+                          {highlightMatch(client.naam || "Onbekend", normalizedSearch)}
                         </p>
-                      )}
+                        {client.bedrijf && (
+                          <p className="text-xs text-gridline/70">
+                            {highlightMatch(client.bedrijf, normalizedSearch)}
+                          </p>
+                        )}
+                      </button>
                     </td>
                     <td className="py-3 pr-4 text-xs leading-5 text-gridline/90">
                       <p>{highlightMatch(client.email || "Geen e-mail", normalizedSearch)}</p>
                       <p>{highlightMatch(client.telefoon || "Geen telefoon", normalizedSearch)}</p>
                     </td>
                     <td className="py-3 pr-4 text-xs leading-5 text-gridline/90">
-                      {highlightMatch(client.adres || "Geen adres", normalizedSearch)}
+                      {highlightMatch(
+                        formatAddressDisplay(client) || "Geen adres",
+                        normalizedSearch
+                      )}
                     </td>
                     <td className="py-3 pr-4 text-xs leading-5 text-gridline/90">
                       {highlightMatch(client.btw_nummer || "-", normalizedSearch)}
@@ -429,6 +541,26 @@ function Input({ label, name, value, onChange, required = false, type = "text" }
       />
     </div>
   );
+}
+
+function formatStructuredAddress(client) {
+  if (!client) return "";
+  const line1 = client.street ? client.street : "";
+  const line2Parts = [client.postal_code, client.city].filter(Boolean).join(" ");
+  const country = client.country_code || "";
+  return [line1, line2Parts, country].filter(Boolean).join(", ");
+}
+
+function formatAddressDisplay(client) {
+  if (!client) return "";
+  const parts = [];
+  if (client.street) parts.push(client.street);
+  const cityLine = [client.postal_code, client.city].filter(Boolean).join(" ");
+  if (cityLine) parts.push(cityLine);
+  if (client.country_code && parts.join(", ").toLowerCase().indexOf(client.country_code.toLowerCase()) === -1) {
+    parts.push(client.country_code);
+  }
+  return parts.join(", ");
 }
 
 function highlightMatch(value, term) {

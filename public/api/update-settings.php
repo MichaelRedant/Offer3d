@@ -9,13 +9,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/invoice-utils.php';
 
-// ✅ Haal JSON-body op (werkt niet met $_POST!)
+// Haal JSON-body op (werkt niet met $_POST!)
 $input = file_get_contents("php://input");
 $data = json_decode($input, true);
-
-// 🔍 Debug eventueel tijdelijk:
-// file_put_contents("debug_input.json", $input);
 
 if (!$data || !is_array($data)) {
     http_response_code(400);
@@ -23,7 +21,7 @@ if (!$data || !is_array($data)) {
     exit;
 }
 
-// ✅ Check op aanwezigheid keys (0 is geldig, dus check op bestaan)
+// Check op aanwezigheid keys (0 is geldig, dus check op bestaan)
 $required = [
     'standaardWinstmarge',
     'elektriciteitsprijs',
@@ -40,6 +38,16 @@ $required = [
     'vatNumber',
     'termsText',
     'termsUrl',
+    'iban',
+    'bic',
+    'companyStreet',
+    'companyPostalCode',
+    'companyCity',
+    'companyCountryCode',
+    'peppolEndpointId',
+    'peppolScheme',
+    'defaultDueDays',
+    'paymentTerms',
 ];
 foreach ($required as $key) {
     if (!array_key_exists($key, $data)) {
@@ -50,6 +58,8 @@ foreach ($required as $key) {
 }
 
 try {
+    ensureSettingsExtendedColumns($pdo);
+
     $addColumns = [
         "modellerings_tarief_per_uur DECIMAL(10,2) NOT NULL DEFAULT 40.00",
         "company_name VARCHAR(255) NULL",
@@ -59,7 +69,17 @@ try {
         "logo_url VARCHAR(512) NULL",
         "vat_number VARCHAR(64) NULL",
         "terms_text TEXT NULL",
-        "terms_url VARCHAR(512) NULL"
+        "terms_url VARCHAR(512) NULL",
+        "iban VARCHAR(34) NULL",
+        "bic VARCHAR(32) NULL",
+        "company_street VARCHAR(255) NULL",
+        "company_postal_code VARCHAR(32) NULL",
+        "company_city VARCHAR(128) NULL",
+        "company_country_code VARCHAR(4) NULL DEFAULT 'BE'",
+        "peppol_endpoint_id VARCHAR(64) NULL",
+        "peppol_scheme VARCHAR(16) NULL",
+        "default_due_days INT NOT NULL DEFAULT 14",
+        "payment_terms TEXT NULL"
     ];
     foreach ($addColumns as $colDef) {
         $colName = explode(' ', $colDef)[0];
@@ -87,7 +107,17 @@ try {
             logo_url,
             vat_number,
             terms_text,
-            terms_url
+            terms_url,
+            iban,
+            bic,
+            company_street,
+            company_postal_code,
+            company_city,
+            company_country_code,
+            peppol_endpoint_id,
+            peppol_scheme,
+            default_due_days,
+            payment_terms
         ) VALUES (
             1,
             :standaardWinstmarge,
@@ -104,7 +134,17 @@ try {
             :logoUrl,
             :vatNumber,
             :termsText,
-            :termsUrl
+            :termsUrl,
+            :iban,
+            :bic,
+            :companyStreet,
+            :companyPostalCode,
+            :companyCity,
+            :companyCountryCode,
+            :peppolEndpointId,
+            :peppolScheme,
+            :defaultDueDays,
+            :paymentTerms
         )
         ON DUPLICATE KEY UPDATE
             standaard_winstmarge_perc = VALUES(standaard_winstmarge_perc),
@@ -121,7 +161,17 @@ try {
             logo_url = VALUES(logo_url),
             vat_number = VALUES(vat_number),
             terms_text = VALUES(terms_text),
-            terms_url = VALUES(terms_url)
+            terms_url = VALUES(terms_url),
+            iban = VALUES(iban),
+            bic = VALUES(bic),
+            company_street = VALUES(company_street),
+            company_postal_code = VALUES(company_postal_code),
+            company_city = VALUES(company_city),
+            company_country_code = VALUES(company_country_code),
+            peppol_endpoint_id = VALUES(peppol_endpoint_id),
+            peppol_scheme = VALUES(peppol_scheme),
+            default_due_days = VALUES(default_due_days),
+            payment_terms = VALUES(payment_terms)
     ");
 
     $stmt->execute([
@@ -140,6 +190,16 @@ try {
         ':vatNumber' => $data['vatNumber'],
         ':termsText' => $data['termsText'],
         ':termsUrl' => $data['termsUrl'],
+        ':iban' => $data['iban'],
+        ':bic' => $data['bic'],
+        ':companyStreet' => $data['companyStreet'],
+        ':companyPostalCode' => $data['companyPostalCode'],
+        ':companyCity' => $data['companyCity'],
+        ':companyCountryCode' => $data['companyCountryCode'],
+        ':peppolEndpointId' => $data['peppolEndpointId'],
+        ':peppolScheme' => $data['peppolScheme'],
+        ':defaultDueDays' => (int)$data['defaultDueDays'],
+        ':paymentTerms' => $data['paymentTerms'],
     ]);
 
     echo json_encode(['success' => true]);

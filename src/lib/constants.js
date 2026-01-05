@@ -4,4 +4,7 @@
 
 const envApiBase = import.meta?.env?.VITE_API_BASE;
 
-export const baseUrl = (envApiBase || "https://xinudesign.be/offr3d/api").replace(/\/$/, "");
+// Val terug op dezelfde host zodat lokale builds niet onbedoeld productie aanroepen.
+const fallback = `${window.location.origin}/offr3d/api`;
+
+export const baseUrl = (envApiBase || fallback).replace(/\/$/, "");

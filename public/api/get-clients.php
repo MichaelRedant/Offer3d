@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/invoice-utils.php';
 
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, OPTIONS");
@@ -16,6 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $user_id = 1;
 
 try {
+    ensureClientExtendedColumns($pdo);
+
     $stmt = $pdo->prepare("SELECT * FROM clients WHERE user_id = ?");
     $stmt->execute([$user_id]);
     $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);

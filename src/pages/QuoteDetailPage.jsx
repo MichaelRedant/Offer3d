@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import TerminalBackButton from "../components/TerminalBackButton";
 import { baseUrl } from "../lib/constants";
+import { SettingsContext } from "../context/SettingsContext";
 
 const dateFormatter = new Intl.DateTimeFormat("nl-BE", {
   day: "2-digit",
@@ -14,15 +15,164 @@ function formatCurrency(value) {
   return `${Number.parseFloat(value || 0).toFixed(2)} EUR`;
 }
 
+function CreateInvoiceModal({ isOpen, onClose, quoteId, settings, onSuccess, customer }) {
+  const [form, setForm] = useState({
+    invoiceNumber: "",
+    issueDate: "",
+    dueDate: "",
+    paymentReference: "",
+    buyerReference: "",
+    paymentTerms: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const today = new Date();
+    const isoToday = today.toISOString().slice(0, 10);
+    const dueDays = Number(settings?.defaultDueDays ?? 14);
+    const dueDateObj = new Date(today);
+    dueDateObj.setDate(dueDateObj.getDate() + dueDays);
+    const suggestedNumber = `INV-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}-${String(quoteId).padStart(4, "0")}`;
+    setForm({
+      invoiceNumber: suggestedNumber,
+      issueDate: isoToday,
+      dueDate: dueDateObj.toISOString().slice(0, 10),
+      paymentReference: suggestedNumber,
+      buyerReference: `QUOTE-${quoteId}`,
+      paymentTerms: settings?.paymentTerms ?? "",
+    });
+    setError(null);
+  }, [isOpen, quoteId, settings]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+
+    if (!customer || !customer.street || !customer.postal_code || !customer.city || !customer.country_code) {
+      setError("Klantadres onvolledig: vul straat, postcode, stad en land in bij de klant.");
+      setSaving(false);
+      return;
+    }
+
+    try {
+      const payload = {
+        quote_id: Number(quoteId),
+        invoice_number: form.invoiceNumber || undefined,
+        issue_date: form.issueDate,
+        due_date: form.dueDate,
+        payment_reference: form.paymentReference || undefined,
+        buyer_reference: form.buyerReference || undefined,
+        payment_terms: form.paymentTerms || undefined,
+      };
+
+      const res = await fetch(`${baseUrl}/create-invoice-from-quote.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Aanmaken factuur mislukt.");
+      }
+
+      if (typeof onSuccess === "function") {
+        onSuccess(data.invoice_id);
+      }
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Kon factuur niet aanmaken.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="terminal-card w-full max-w-xl space-y-4 shadow-terminal-glow">
+        <header className="space-y-2">
+          <p className="terminal-section-title">Factuur genereren</p>
+          <h2 className="text-xl font-semibold tracking-dial uppercase text-base-soft">Maak factuur van offerte #{quoteId}</h2>
+        </header>
+
+        {error && <p className="text-sm text-signal-red tracking-[0.08em]">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <Input name="invoiceNumber" label="Factuurnummer" value={form.invoiceNumber} onChange={handleChange} required />
+            <Input name="buyerReference" label="Buyer reference" value={form.buyerReference} onChange={handleChange} required />
+            <Input name="issueDate" label="Factuurdatum" type="date" value={form.issueDate} onChange={handleChange} required />
+            <Input name="dueDate" label="Vervaldatum" type="date" value={form.dueDate} onChange={handleChange} required />
+            <Input name="paymentReference" label="Betalingsreferentie" value={form.paymentReference} onChange={handleChange} />
+          </div>
+          <div className="space-y-2">
+            <label className="terminal-label" htmlFor="paymentTerms">
+              Betaalvoorwaarden
+            </label>
+            <textarea
+              id="paymentTerms"
+              name="paymentTerms"
+              value={form.paymentTerms}
+              onChange={handleChange}
+              className="terminal-input min-h-[120px]"
+              placeholder="Te betalen binnen 14 dagen…"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button type="button" className="terminal-button is-ghost" onClick={onClose} disabled={saving}>
+              Annuleren
+            </button>
+            <button type="submit" className="terminal-button is-accent" disabled={saving}>
+              {saving ? "Aanmaken…" : "Factuur aanmaken"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function Input({ name, label, value, onChange, type = "text", required = false }) {
+  return (
+    <div className="space-y-2">
+      <label className="terminal-label" htmlFor={name}>
+        {label}
+      </label>
+      <input
+        id={name}
+        name={name}
+        type={type}
+        value={value}
+        onChange={onChange}
+        required={required}
+        className="terminal-input"
+      />
+    </div>
+  );
+}
+
 export default function QuoteDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { settings } = useContext(SettingsContext);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState(null);
   const [quoteStatus, setQuoteStatus] = useState("draft");
   const [deleting, setDeleting] = useState(false);
   const [events, setEvents] = useState([]);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
 
   const handleDownloadPdf = () => {
     const url = `${baseUrl}/generate-quote-pdf.php?id=${id}`;
@@ -138,6 +288,10 @@ export default function QuoteDetailPage() {
     }
   };
 
+  const handleInvoiceCreated = (invoiceId) => {
+    navigate(`/facturen/${invoiceId}`);
+  };
+
   if (loading) {
     return (
       <main className="space-y-6">
@@ -186,6 +340,13 @@ export default function QuoteDetailPage() {
             >
               Bewerk
             </Link>
+            <button
+              type="button"
+              className="terminal-button is-accent text-xs tracking-[0.12em]"
+              onClick={() => setIsInvoiceModalOpen(true)}
+            >
+              Maak factuur
+            </button>
             <button
               type="button"
               className="terminal-button is-danger text-xs tracking-[0.12em]"
@@ -243,6 +404,11 @@ export default function QuoteDetailPage() {
             </div>
           ))}
         </div>
+        {offerte?.vat_exempt ? (
+          <p className="terminal-note text-signal-amber">
+            BTW vrijgesteld (0%){offerte.vat_exempt_reason ? ` - ${offerte.vat_exempt_reason}` : ""}
+          </p>
+        ) : null}
       </section>
 
       <section className="terminal-card space-y-3 text-sm text-gridline/80">
@@ -354,6 +520,14 @@ export default function QuoteDetailPage() {
           </ul>
         )}
       </section>
+      <CreateInvoiceModal
+        isOpen={isInvoiceModalOpen}
+        onClose={() => setIsInvoiceModalOpen(false)}
+        quoteId={id}
+        settings={settings}
+        onSuccess={handleInvoiceCreated}
+        customer={offerte}
+      />
     </main>
   );
 }

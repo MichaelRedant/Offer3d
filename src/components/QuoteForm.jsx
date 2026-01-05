@@ -20,6 +20,8 @@ export default function QuoteForm({ onChange }) {
     materialMarkup: 20,
     korting: 0,
     btw: 21,
+    btwVrijgesteld: false,
+    btwVrijTekst: "",
   });
 
   useEffect(() => {
@@ -36,6 +38,8 @@ export default function QuoteForm({ onChange }) {
           settings.materialMarkup ?? settings.materiaalOpslagPerc ?? prev.materialMarkup,
         korting: settings.korting,
         btw: settings.btw,
+        btwVrijgesteld: false,
+        btwVrijTekst: "",
       }));
     }
   }, [settings]);
@@ -242,6 +246,23 @@ export default function QuoteForm({ onChange }) {
         </Fieldset>
 
         <Fieldset title="Fiscale instellingen">
+          <Select
+            label="BTW-regeling"
+            name="btwType"
+            value={form.btwVrijgesteld ? "exempt" : "standard"}
+            onChange={(event) => {
+              const next = event.target.value;
+              setForm((prev) => ({
+                ...prev,
+                btwVrijgesteld: next === "exempt",
+                btw: next === "exempt" ? 0 : (settings?.btw ?? prev.btw ?? 21),
+              }));
+            }}
+            options={[
+              { value: "standard", label: "Standaard btw" },
+              { value: "exempt", label: "Vrijgesteld (0%)" },
+            ]}
+          />
           <Input
             label="BTW (%)"
             type="number"
@@ -250,7 +271,17 @@ export default function QuoteForm({ onChange }) {
             onChange={handleChange}
             min={0}
             step={0.01}
+            disabled={form.btwVrijgesteld}
           />
+          {form.btwVrijgesteld && (
+            <Input
+              label="Vrijstellingsreden"
+              name="btwVrijTekst"
+              value={form.btwVrijTekst}
+              onChange={handleChange}
+              placeholder="Bijv. vrijgesteld art. 44 WBTW"
+            />
+          )}
         </Fieldset>
       </div>
     </section>

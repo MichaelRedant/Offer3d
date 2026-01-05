@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/invoice-utils.php';
 
 $user_id = 1; // Simulatie
 
@@ -33,10 +34,14 @@ if (
 }
 
 try {
+    ensureQuoteTaxColumns($pdo);
+
     $pdo->beginTransaction();
 
     $form = $data['form'];
     $summary = $data['summary'];
+    $vatExempt = !empty($form['btwVrijgesteld']);
+    $vatReason = $form['btwVrijTekst'] ?? null;
 
     // 🧾 1. Quotes-insert
     $stmt = $pdo->prepare("
@@ -45,13 +50,13 @@ try {
             status, status_updated_at,
             standaard_winstmarge_perc, gebruik_geen_marge, gebruik_item_marges,
             vaste_startkost, vervoerskost, korting_perc, btw_perc, elektriciteitskost_per_kwh,
-            totaal_netto, totaal_btw, totaal_bruto
+            totaal_netto, totaal_btw, totaal_bruto, vat_exempt, vat_exempt_reason
         ) VALUES (
             :user_id, :client_id, :datum,
             :status, NOW(),
             :winst, :geen_marge, :item_marges,
             :startkost, :vervoerskost, :korting, :btw, :elek,
-            :netto, :btw_bedrag, :bruto
+            :netto, :btw_bedrag, :bruto, :vat_exempt, :vat_exempt_reason
         )
     ");
 
@@ -71,6 +76,8 @@ try {
         ':netto' => floatval($summary['totaalNetto']),
         ':btw_bedrag' => floatval($summary['btw']),
         ':bruto' => floatval($summary['totaalBruto']),
+        ':vat_exempt' => $vatExempt ? 1 : 0,
+        ':vat_exempt_reason' => $vatReason,
     ]);
 
     $quote_id = $pdo->lastInsertId();

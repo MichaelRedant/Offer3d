@@ -115,6 +115,19 @@ export default function SettingsPage() {
     companyEmail: "",
     companyPhone: "",
     logoUrl: "",
+    vatNumber: "",
+    termsText: "",
+    termsUrl: "",
+    iban: "",
+    bic: "",
+    companyStreet: "",
+    companyPostalCode: "",
+    companyCity: "",
+    companyCountryCode: "BE",
+    peppolEndpointId: "",
+    peppolScheme: "",
+    defaultDueDays: 14,
+    paymentTerms: "",
   };
 
   const [formData, setFormData] = useState(emptyForm);
@@ -202,6 +215,16 @@ export default function SettingsPage() {
       vatNumber: formData.vatNumber,
       termsText: formData.termsText,
       termsUrl: formData.termsUrl,
+      iban: formData.iban,
+      bic: formData.bic,
+      companyStreet: formData.companyStreet,
+      companyPostalCode: formData.companyPostalCode,
+      companyCity: formData.companyCity,
+      companyCountryCode: formData.companyCountryCode || "BE",
+      peppolEndpointId: formData.peppolEndpointId,
+      peppolScheme: formData.peppolScheme,
+      defaultDueDays: Number(formData.defaultDueDays || 14),
+      paymentTerms: formData.paymentTerms,
     };
 
     try {
@@ -321,7 +344,7 @@ export default function SettingsPage() {
 
         <Section
           title="Bedrijfsgegevens"
-          description="Deze info wordt gebruikt op offertes en PDF-export (logo optioneel)."
+          description="Wordt gebruikt op offertes/facturen en Peppol-adressering."
         >
           <InputField
             label="Bedrijfsnaam"
@@ -331,7 +354,35 @@ export default function SettingsPage() {
             required
           />
           <InputField
-            label="Adres"
+            label="Straat en nummer"
+            name="companyStreet"
+            value={formData.companyStreet}
+            onChange={handleChange}
+            placeholder="Bijv. Industrielaan 12"
+          />
+          <InputField
+            label="Postcode"
+            name="companyPostalCode"
+            value={formData.companyPostalCode}
+            onChange={handleChange}
+            placeholder="1000"
+          />
+          <InputField
+            label="Gemeente / Stad"
+            name="companyCity"
+            value={formData.companyCity}
+            onChange={handleChange}
+            placeholder="Brussel"
+          />
+          <InputField
+            label="Landcode"
+            name="companyCountryCode"
+            value={formData.companyCountryCode}
+            onChange={handleChange}
+            placeholder="BE"
+          />
+          <InputField
+            label="Adres (vrij veld)"
             name="companyAddress"
             value={formData.companyAddress}
             onChange={handleChange}
@@ -350,15 +401,13 @@ export default function SettingsPage() {
             value={formData.companyPhone}
             onChange={handleChange}
           />
-
-        <InputField
+          <InputField
             label="VAT-nummer"
             name="vatNumber"
             value={formData.vatNumber}
             onChange={handleChange}
             placeholder="BE0123.456.789"
           />
-    
           <div className="space-y-2 md:col-span-2">
             <label className="terminal-label">Logo URL</label>
             <div className="flex flex-wrap gap-3">
@@ -384,6 +433,68 @@ export default function SettingsPage() {
               Bestand wordt opgeslagen in /offr3d/uploads/. Ondersteund: PNG, JPG, SVG.
             </p>
           </div>
+        </Section>
+
+        <Section
+          title="Facturatie & betalingen"
+          description="IBAN/BIC, standaard vervaldagen en betaalinstructies voor facturen."
+        >
+          <InputField
+            label="IBAN"
+            name="iban"
+            value={formData.iban}
+            onChange={handleChange}
+            placeholder="BE68 5390 0754 7034"
+          />
+          <InputField
+            label="BIC"
+            name="bic"
+            value={formData.bic}
+            onChange={handleChange}
+            placeholder="GEBABEBB"
+          />
+          <InputField
+            label="Standaard betalingstermijn (dagen)"
+            name="defaultDueDays"
+            value={formData.defaultDueDays}
+            onChange={handleChange}
+            type="number"
+            min={1}
+            step={1}
+          />
+          <div className="md:col-span-2 space-y-2">
+            <label className="terminal-label" htmlFor="paymentTerms">
+              Betaalvoorwaarden
+            </label>
+            <textarea
+              id="paymentTerms"
+              name="paymentTerms"
+              value={formData.paymentTerms}
+              onChange={handleChange}
+              className="terminal-input min-h-[120px]"
+              placeholder="Bijv. Te betalen binnen 14 dagen via overschrijving op IBAN..."
+            />
+          </div>
+        </Section>
+
+        <Section
+          title="Peppol"
+          description="Deelnemer-ID voor Peppol facturatie (Belgische standaard: scheme 9956 + VAT/KBO)."
+        >
+          <InputField
+            label="Peppol Participant ID"
+            name="peppolEndpointId"
+            value={formData.peppolEndpointId}
+            onChange={handleChange}
+            placeholder="BE0123456789"
+          />
+          <InputField
+            label="Peppol SchemeID"
+            name="peppolScheme"
+            value={formData.peppolScheme}
+            onChange={handleChange}
+            placeholder="9956"
+          />
         </Section>
 
 
@@ -453,6 +564,7 @@ function InputField({
   min,
   step = "any",
   featured = false,
+  placeholder = "",
 }) {
   return (
     <div
@@ -469,16 +581,16 @@ function InputField({
       </label>
       <div className="flex items-center gap-2">
         <input
-          type={type}
-          name={name}
-          id={name}
-          step={step}
-          min={min}
-          value={value}
-          onChange={onChange}
-          className="terminal-input"
-          placeholder="0"
-        />
+        type={type}
+        name={name}
+        id={name}
+        step={step}
+        min={min}
+        value={value}
+        onChange={onChange}
+        className="terminal-input"
+        placeholder={placeholder}
+      />
       </div>
       {helper && <p className="text-xs text-gridline/70">{helper}</p>}
     </div>
@@ -547,6 +659,16 @@ function extractFormValues(source) {
     vatNumber: source.vatNumber ?? "",
     termsText: source.termsText ?? "",
     termsUrl: source.termsUrl ?? "",
+    iban: source.iban ?? "",
+    bic: source.bic ?? "",
+    companyStreet: source.companyStreet ?? "",
+    companyPostalCode: source.companyPostalCode ?? "",
+    companyCity: source.companyCity ?? "",
+    companyCountryCode: source.companyCountryCode ?? "BE",
+    peppolEndpointId: source.peppolEndpointId ?? "",
+    peppolScheme: source.peppolScheme ?? "",
+    defaultDueDays: source.defaultDueDays ?? 14,
+    paymentTerms: source.paymentTerms ?? "",
   };
 }
 

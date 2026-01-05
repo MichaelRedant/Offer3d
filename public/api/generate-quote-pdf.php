@@ -105,6 +105,8 @@ foreach ($items as $index => $item) {
 $totaalNetto = number_format((float)($quote['totaal_netto'] ?? 0), 2, ',', '.');
 $totaalBtw = number_format((float)($quote['totaal_btw'] ?? 0), 2, ',', '.');
 $totaalBruto = number_format((float)($quote['totaal_bruto'] ?? 0), 2, ',', '.');
+$vatExempt = !empty($quote['vat_exempt']);
+$vatReason = $quote['vat_exempt_reason'] ?? '';
 
 $logoTag = $logoUrl ? "<img src='{$logoUrl}' style='max-height:60px;' alt='Logo' />" : "";
 $termsBlock = '';
@@ -182,6 +184,8 @@ $html = "
     <tr><td class='label'>BTW</td><td class='value'>{$totaalBtw} EUR</td></tr>
     <tr><td class='label'>Totaal incl. btw</td><td class='value'>{$totaalBruto} EUR</td></tr>
   </table>
+
+  " . ($vatExempt ? "<p class='text-sm' style='margin-top:6px;'><strong>BTW vrijgesteld:</strong> " . htmlspecialchars($vatReason ?: '0% toegepast') . "</p>" : "") . "
 
   {$termsBlock}
   {$pdfLink}

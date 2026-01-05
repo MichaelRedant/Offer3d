@@ -30,7 +30,13 @@ try {
             c.email AS klant_email, 
             c.btw_nummer, 
             c.adres, 
-            c.telefoon
+            c.telefoon,
+            c.street,
+            c.postal_code,
+            c.city,
+            c.country_code,
+            c.peppol_endpoint_id,
+            c.peppol_scheme
         FROM quotes q
         LEFT JOIN clients c ON q.client_id = c.id
         WHERE q.id = ? AND q.user_id = ?

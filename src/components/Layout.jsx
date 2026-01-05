@@ -4,7 +4,9 @@ const NAV_LINKS = [
   { to: "/", label: "Dashboard", exact: true },
   { to: "/offerte", label: "Nieuwe Offerte" },
   { to: "/offertes", label: "Offertes" },
+  { to: "/facturen", label: "Facturen" },
   { to: "/materialen", label: "Filamentbeheer" },
+  { to: "/instellingen/klanten", label: "Klanten" },
   { to: "/instellingen", label: "Instellingen" },
 ];
 

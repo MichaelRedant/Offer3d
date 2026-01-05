@@ -43,6 +43,8 @@ const DEFAULT_FORM = {
   materialMarkup: 20,
   korting: 0,
   btw: 21,
+  btwVrijgesteld: false,
+  btwVrijTekst: "",
 };
 
 export default function NewQuotePage() {
@@ -134,11 +136,13 @@ export default function NewQuotePage() {
           elektriciteitsprijs: parseFloat(offerte.elektriciteitskost_per_kwh ?? settings?.elektriciteitsprijs ?? 0),
           overrideElektriciteitsprijs: true,
           vasteStartkost: parseFloat(offerte.vaste_startkost ?? 0),
-          vervoerskost: parseFloat(offerte.vervoerskost ?? 0),
-          korting: parseFloat(offerte.korting_perc ?? settings?.korting ?? 0),
-          btw: parseFloat(offerte.btw_perc ?? settings?.btw ?? 21),
-          materialMarkup: settings?.materialMarkup ?? settings?.materiaalOpslagPerc ?? DEFAULT_FORM.materialMarkup,
-        };
+        vervoerskost: parseFloat(offerte.vervoerskost ?? 0),
+        korting: parseFloat(offerte.korting_perc ?? settings?.korting ?? 0),
+        btw: parseFloat(offerte.btw_perc ?? settings?.btw ?? 21),
+        btwVrijgesteld: Boolean(offerte.vat_exempt),
+        btwVrijTekst: offerte.vat_exempt_reason ?? "",
+        materialMarkup: settings?.materialMarkup ?? settings?.materiaalOpslagPerc ?? DEFAULT_FORM.materialMarkup,
+      };
 
         const mappedItems = (quoteItems || []).map((item) => {
           const printSeconds = Number(item.printtijd_seconden ?? 0);
@@ -241,7 +245,7 @@ export default function NewQuotePage() {
       return;
     }
 
-    const validationErrors = validateQuoteBeforeSave({ items, summary, form });
+    const validationErrors = validateQuoteBeforeSave({ items, summary, form, client: selectedClient });
     if (validationErrors.length > 0) {
       showToast({
         type: "error",
@@ -377,6 +381,11 @@ export default function NewQuotePage() {
                   {selectedClient.naam}
                   {selectedClient.bedrijf ? ` / ${selectedClient.bedrijf}` : ""}
                 </span>
+                {(!selectedClient.street || !selectedClient.postal_code || !selectedClient.city || !selectedClient.country_code) && (
+                  <span className="terminal-pill border-signal-amber/70 text-signal-amber">
+                    Vul straat / postcode / stad / land in (nodig voor factuur/UBL)
+                  </span>
+                )}
               </div>
             ) : (
               <p className="terminal-note">Geen klant geselecteerd.</p>
@@ -465,7 +474,7 @@ function prepareItemsForPayload(items, summary) {
   });
 }
 
-function validateQuoteBeforeSave({ items, summary, form }) {
+function validateQuoteBeforeSave({ items, summary, form, client }) {
   const errors = [];
 
   if (!form?.offertedatum) {
@@ -504,6 +513,14 @@ function validateQuoteBeforeSave({ items, summary, form }) {
     errors.push("Lossen eerst de fouten in de kostencalculatie op.");
   }
 
+  if (client) {
+    const requiredAddress = ["street", "postal_code", "city", "country_code"];
+    const missingAddr = requiredAddress.filter((key) => !client[key] || String(client[key]).trim() === "");
+    if (missingAddr.length > 0) {
+      errors.push("Klantadres onvolledig (straat/postcode/stad/land verplicht voor factuur/UBL).");
+    }
+  }
+
   return errors;
 }
 
@@ -529,6 +546,8 @@ async function updateExistingQuote({ id, clientId, form, summary, items, setting
     totaal_btw: Number(totals.vat_amount ?? 0),
     totaal_bruto: Number(totals.total_including_vat ?? totals.total_final ?? 0),
     opmerkingen: "",
+    vat_exempt: Boolean(form.btwVrijgesteld),
+    vat_exempt_reason: form.btwVrijTekst ?? "",
     status: status ?? "draft",
     items,
   };

@@ -12,6 +12,10 @@ import PriceRulesManager from "./components/settings/PriceRulesManager";
 import QuotesPage from "./pages/QuotesPage";
 import QuoteDetailPage from "./pages/QuoteDetailPage";
 import KlantenBeheer from "./pages/KlantenBeheer";
+import InvoicesPage from "./pages/InvoicesPage";
+import InvoiceDetailPage from "./pages/InvoiceDetailPage";
+import ClientStatsPage from "./pages/ClientStatsPage";
+import NewInvoicePage from "./pages/NewInvoicePage";
 
 export default function App() {
   return (
@@ -31,6 +35,10 @@ export default function App() {
               <Route path="/offertes" element={<QuotesPage />} />
               <Route path="/offertes/:id" element={<QuoteDetailPage />} />
               <Route path="/instellingen/klanten" element={<KlantenBeheer />} />
+              <Route path="/factuur" element={<NewInvoicePage />} />
+              <Route path="/klanten/:id" element={<ClientStatsPage />} />
+              <Route path="/facturen" element={<InvoicesPage />} />
+              <Route path="/facturen/:id" element={<InvoiceDetailPage />} />
             </Routes>
           </Layout>
         </BrowserRouter>

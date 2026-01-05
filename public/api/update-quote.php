@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/invoice-utils.php';
 
 $userId = 1; // Gesimuleerde ingelogde gebruiker
 $data = json_decode(file_get_contents("php://input"), true);
@@ -21,6 +22,8 @@ if (!$data || !isset($data['id']) || !isset($data['items'])) {
 }
 
 try {
+    ensureQuoteTaxColumns($pdo);
+
     $pdo->beginTransaction();
 
     // ✅ 1. Update de offerte zelf
@@ -41,7 +44,9 @@ try {
             totaal_netto = ?,
             totaal_btw = ?,
             totaal_bruto = ?,
-            opmerkingen = ?
+            opmerkingen = ?,
+            vat_exempt = ?,
+            vat_exempt_reason = ?
         WHERE id = ? AND user_id = ?
     ");
 
@@ -61,6 +66,8 @@ try {
         floatval($data['totaal_btw'] ?? 0),
         floatval($data['totaal_bruto'] ?? 0),
         $data['opmerkingen'] ?? '',
+        intval(!empty($data['vat_exempt'])),
+        $data['vat_exempt_reason'] ?? null,
         intval($data['id']),
         $userId
     ]);
