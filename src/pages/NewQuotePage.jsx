@@ -86,9 +86,12 @@ export default function NewQuotePage() {
   const [quoteStatus, setQuoteStatus] = useState("draft");
   const [validationMessages, setValidationMessages] = useState([]);
   const [loadError, setLoadError] = useState(null);
+  const [dirtyItems, setDirtyItems] = useState(false);
+  const [dirtyForm, setDirtyForm] = useState(false);
 
   const handleModeChange = useCallback((mode) => {
     setQuoteMode(mode);
+    setDirtyItems(true);
     if (mode === "manual") {
       setItems([]);
       setCustomItems((prev) => (prev.length ? prev : [{ ...INITIAL_CUSTOM_ITEM }]));
@@ -169,15 +172,32 @@ export default function NewQuotePage() {
             : null
         );
 
+        const parseNum = (val) => {
+          if (typeof val === "string") {
+            const normalized = val.replace(",", ".");
+            const parsed = Number(normalized);
+            return Number.isFinite(parsed) ? parsed : 0;
+          }
+          const parsed = Number(val);
+          return Number.isFinite(parsed) ? parsed : 0;
+        };
+        const parseBool = (val) => Number(val ?? 0) === 1 || val === true;
+
+        const elekValue = parseFloat(offerte.elektriciteitskost_per_kwh ?? settings?.elektriciteitsprijs ?? 0);
+        const elekOverride =
+          offerte.elektriciteitskost_per_kwh !== null &&
+          offerte.elektriciteitskost_per_kwh !== undefined &&
+          !Number.isNaN(Number(offerte.elektriciteitskost_per_kwh));
+
         const formFromQuote = {
           ...DEFAULT_FORM,
           offertedatum: offerte.datum ?? DEFAULT_FORM.offertedatum,
           deliveryType: offerte.delivery_type || DEFAULT_FORM.deliveryType,
           globaleWinstmarge: parseFloat(offerte.standaard_winstmarge_perc ?? settings?.standaardWinstmarge ?? 0),
-          gebruikGeenMarge: Boolean(offerte.gebruik_geen_marge),
-          gebruikIndividueleMarges: Boolean(offerte.gebruik_item_marges),
-          elektriciteitsprijs: parseFloat(offerte.elektriciteitskost_per_kwh ?? settings?.elektriciteitsprijs ?? 0),
-          overrideElektriciteitsprijs: true,
+          gebruikGeenMarge: parseBool(offerte.gebruik_geen_marge),
+          gebruikIndividueleMarges: parseBool(offerte.gebruik_item_marges),
+          elektriciteitsprijs: elekValue,
+          overrideElektriciteitsprijs: elekOverride,
           vasteStartkost: parseFloat(offerte.vaste_startkost ?? 0),
           vervoerskost: parseFloat(offerte.vervoerskost ?? 0),
           korting: parseFloat(offerte.korting_perc ?? settings?.korting ?? 0),
@@ -202,33 +222,33 @@ export default function NewQuotePage() {
             ...INITIAL_ITEM,
             id: item.id,
             name: item.naam ?? "",
-            aantal: Number(item.aantal ?? 1),
+            aantal: parseNum(item.aantal ?? 1),
             hours,
             minutes,
             seconds,
-            weight: Number(item.gewicht_g ?? 0),
+            weight: parseNum(item.gewicht_g ?? 0),
             materiaal_id: item.materiaal_id ? Number(item.materiaal_id) : null,
             filamentType: item.materiaal_naam ?? "",
             filamentDisplayName: item.materiaal_naam
               ? `${item.materiaal_naam}${item.materiaal_kleur ? ` (${item.materiaal_kleur})` : ""}`
               : "",
-            margin: Number(item.custom_winstmarge_perc ?? formFromQuote.globaleWinstmarge ?? 0),
-            override_marge: Boolean(item.override_marge),
-            custom_winstmarge_perc: Number(item.custom_winstmarge_perc ?? 0),
-            supportmateriaal: Boolean(item.supportmateriaal),
-            nozzle_slijtagekost: Number(item.nozzle_slijtagekost ?? 0),
-            post_processing_kost: Number(item.post_processing_kost ?? 0),
-            assemblage_uur: Number(item.assemblage_uur ?? 0),
-            scan_kost: Number(item.scan_kost ?? 0),
-            modelleringNodig: Number(item.modellering_uur ?? 0) > 0,
-            modellering_uur: Number(item.modellering_uur ?? 0),
+            margin: parseNum(item.custom_winstmarge_perc ?? formFromQuote.globaleWinstmarge ?? 0),
+            override_marge: parseBool(item.override_marge),
+            custom_winstmarge_perc: parseNum(item.custom_winstmarge_perc ?? 0),
+            supportmateriaal: parseBool(item.supportmateriaal),
+            nozzle_slijtagekost: parseNum(item.nozzle_slijtagekost ?? 0),
+            post_processing_kost: parseNum(item.post_processing_kost ?? 0),
+            assemblage_uur: parseNum(item.assemblage_uur ?? 0),
+            scan_kost: parseNum(item.scan_kost ?? 0),
+            modelleringNodig: parseNum(item.modellering_uur ?? 0) > 0,
+            modellering_uur: parseNum(item.modellering_uur ?? 0),
             modelleringssoftware_id: item.modelleringssoftware_id ? Number(item.modelleringssoftware_id) : null,
-            gebruik_custom_uurtarief: Boolean(item.gebruik_custom_uurtarief),
-            custom_uurtarief: Number(item.custom_uurtarief ?? 0),
-            manuele_toeslag: Number(item.manuele_toeslag ?? 0),
+            gebruik_custom_uurtarief: parseBool(item.gebruik_custom_uurtarief),
+            custom_uurtarief: parseNum(item.custom_uurtarief ?? 0),
+            manuele_toeslag: parseNum(item.manuele_toeslag ?? 0),
             modelLink: item.model_link ?? "",
-            verkoopprijs_per_stuk: Number(item.verkoopprijs_per_stuk ?? 0),
-            subtotaal: Number(item.subtotaal ?? 0),
+            verkoopprijs_per_stuk: parseNum(item.verkoopprijs_per_stuk ?? 0),
+            subtotaal: parseNum(item.subtotaal ?? 0),
           };
         });
 
@@ -237,14 +257,14 @@ export default function NewQuotePage() {
           id: custom.id,
           title: custom.title ?? "",
           description: custom.description ?? "",
-          quantity: Number(custom.quantity ?? 1),
+          quantity: parseNum(custom.quantity ?? 1),
           unit: custom.unit ?? "stuk",
-          cost_amount: Number(custom.cost_amount ?? 0),
-          price_amount: Number(custom.price_amount ?? 0),
-          margin_percent: Number(custom.margin_percent ?? 0),
-          vat_percent: Number(custom.vat_percent ?? 0),
-          is_optional: Boolean(custom.is_optional),
-          is_selected: custom.is_selected === 0 ? false : true,
+          cost_amount: parseNum(custom.cost_amount ?? 0),
+          price_amount: parseNum(custom.price_amount ?? 0),
+          margin_percent: parseNum(custom.margin_percent ?? 0),
+          vat_percent: parseNum(custom.vat_percent ?? 0),
+          is_optional: parseBool(custom.is_optional),
+          is_selected: parseBool(custom.is_selected ?? 1),
           group_ref: custom.group_ref ?? "",
         }));
 
@@ -254,6 +274,8 @@ export default function NewQuotePage() {
         setQuoteMode(mappedItems.length > 0 ? "print" : "manual");
         setFormSyncKey(Date.now());
         setQuoteLoaded(true);
+        setDirtyItems(false);
+        setDirtyForm(false);
       } catch (error) {
         console.error("Fout bij laden offerte:", error);
         showToast({
@@ -275,8 +297,9 @@ export default function NewQuotePage() {
     return calculateQuoteCost(items, form, settings, priceRules, {
       clientId: selectedClient?.id,
       customItems,
+      useStoredTotals: isEditing && !dirtyItems,
     });
-  }, [items, form, settings, priceRules, selectedClient, customItems]);
+  }, [items, form, settings, priceRules, selectedClient, customItems, isEditing, dirtyItems]);
 
   if (!settings) {
     return (
@@ -288,22 +311,32 @@ export default function NewQuotePage() {
     );
   }
 
-  const handleAddItem = () => setItems((prev) => [...prev, { ...INITIAL_ITEM }]);
-  const handleAddCustomItem = () => setCustomItems((prev) => [...prev, { ...INITIAL_CUSTOM_ITEM }]);
+  const handleAddItem = () => {
+    setDirtyItems(true);
+    setItems((prev) => [...prev, { ...INITIAL_ITEM }]);
+  };
+  const handleAddCustomItem = () => {
+    setDirtyForm(true);
+    setCustomItems((prev) => [...prev, { ...INITIAL_CUSTOM_ITEM }]);
+  };
 
   const handleUpdateItem = (index, updatedItem) => {
-    setItems((prev) => prev.map((item, i) => (i === index ? updatedItem : item)));
+    setDirtyItems(true);
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...updatedItem } : item)));
   };
 
   const handleUpdateCustomItem = (index, updatedItem) => {
+    setDirtyForm(true);
     setCustomItems((prev) => prev.map((item, i) => (i === index ? updatedItem : item)));
   };
 
   const handleRemoveItem = (index) => {
+    setDirtyItems(true);
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleRemoveCustomItem = (index) => {
+    setDirtyForm(true);
     setCustomItems((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -500,7 +533,16 @@ export default function NewQuotePage() {
               )}
             </section>
 
-            <QuoteForm onChange={setForm} initialValues={form} syncKey={formSyncKey} />
+            <QuoteForm
+              onChange={(updated, meta = {}) => {
+                if (meta.user) {
+                  setDirtyForm(true);
+                }
+                setForm(updated);
+              }}
+              initialValues={form}
+              syncKey={formSyncKey}
+            />
 
             {quoteMode === "print" && (
               <PrintItemList

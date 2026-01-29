@@ -14,6 +14,27 @@ function formatCurrency(value) {
   return `${Number.parseFloat(value || 0).toFixed(2)} EUR`;
 }
 
+function getStatusMeta(status) {
+  const labels = {
+    draft: "Concept",
+    review: "Review",
+    verstuurd: "Verstuurd",
+    geaccepteerd: "Geaccepteerd",
+    afgewezen: "Afgewezen",
+  };
+  const tones = {
+    draft: "border-gridline/50 text-base-soft",
+    review: "border-primary/60 text-primary",
+    verstuurd: "border-accent/60 text-accent",
+    geaccepteerd: "border-signal-green/60 text-signal-green",
+    afgewezen: "border-signal-red/60 text-signal-red",
+  };
+  return {
+    label: labels[status] || labels.draft,
+    className: tones[status] || tones.draft,
+  };
+}
+
 export default function QuotesPage() {
   const navigate = useNavigate();
   const [quotes, setQuotes] = useState([]);
@@ -177,109 +198,79 @@ export default function QuotesPage() {
         ) : filteredQuotes.length === 0 ? (
           <p className="terminal-note">Geen offertes gevonden voor deze zoekterm.</p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filteredQuotes.map((quote) => (
-              <QuoteCard
-                key={quote.id}
-                quote={quote}
-                onView={handleView}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onDownloadPdf={handleDownloadPdf}
-                deletingId={deletingId}
-              />
-            ))}
+          <div className="overflow-x-auto">
+            <table className="min-w-full border border-gridline/30 rounded-card overflow-hidden">
+              <thead className="bg-parchment/80 text-xs uppercase tracking-[0.12em] text-gridline/70">
+                <tr>
+                  <th className="px-4 py-3 text-left">#</th>
+                  <th className="px-4 py-3 text-left">Klant</th>
+                  <th className="px-4 py-3 text-left">Bedrijf</th>
+                  <th className="px-4 py-3 text-left">Datum</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-right">Totaal (incl.)</th>
+                  <th className="px-4 py-3 text-right">Items</th>
+                  <th className="px-4 py-3 text-right">Acties</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gridline/20 text-sm text-base-soft">
+                {filteredQuotes.map((quote) => {
+                  const statusMeta = getStatusMeta(quote.status);
+                  return (
+                    <tr key={quote.id} className="hover:bg-parchment/60 transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs text-gridline/80">#{quote.id.toString().padStart(4, "0")}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold tracking-[0.05em]">{quote.klant_naam || "Onbekend"}</div>
+                        {quote.klant_email && <div className="text-xs text-gridline/70">{quote.klant_email}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-gridline/80">{quote.bedrijf || "—"}</td>
+                      <td className="px-4 py-3 text-gridline/80">{dateFormatter.format(new Date(quote.datum))}</td>
+                      <td className="px-4 py-3">
+                        <span className={`terminal-pill text-xs ${statusMeta.className}`}>{statusMeta.label}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-primary">{formatCurrency(quote.totaal_bruto)}</td>
+                      <td className="px-4 py-3 text-right text-gridline/80">{quote.item_count ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            className="terminal-button is-ghost text-xs"
+                            onClick={() => handleView(quote.id)}
+                          >
+                            Bekijk
+                          </button>
+                          <button
+                            type="button"
+                            className="terminal-button is-ghost text-xs"
+                            onClick={() => handleEdit(quote.id)}
+                          >
+                            Bewerk
+                          </button>
+                          <button
+                            type="button"
+                            className="terminal-button is-ghost text-xs"
+                            onClick={() => handleDownloadPdf(quote.id)}
+                          >
+                            PDF
+                          </button>
+                          <button
+                            type="button"
+                            className="terminal-button is-danger text-xs"
+                            onClick={() => handleDelete(quote)}
+                            disabled={deletingId === quote.id}
+                          >
+                            {deletingId === quote.id ? "…" : "Verwijder"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
     </main>
-  );
-}
-
-function QuoteCard({ quote, onView, onEdit, onDelete, deletingId, onDownloadPdf }) {
-  const isDeleting = deletingId === quote.id;
-  const statusLabels = {
-    draft: "Concept",
-    review: "Review",
-    verstuurd: "Verstuurd",
-    geaccepteerd: "Geaccepteerd",
-    afgewezen: "Afgewezen",
-  };
-  const statusTone = {
-    draft: "border-gridline/50 text-base-soft",
-    review: "border-primary/60 text-primary",
-    verstuurd: "border-accent/60 text-accent",
-    geaccepteerd: "border-signal-green/60 text-signal-green",
-    afgewezen: "border-signal-red/60 text-signal-red",
-  };
-  const statusClass = statusTone[quote.status] || statusTone.draft;
-  return (
-    <article className="rounded-card border border-gridline/40 bg-parchment/95 p-5 shadow-terminal hover:-translate-y-1 hover:shadow-terminal-glow transition-transform duration-200 ease-out text-base-soft">
-      <header className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="terminal-section-title">#{quote.id.toString().padStart(4, "0")}</p>
-          <h2 className="text-lg font-semibold tracking-[0.1em] uppercase text-base-soft">
-            {quote.klant_naam}
-          </h2>
-          {quote.bedrijf && (
-            <p className="text-xs tracking-[0.08em] text-gridline/70">{quote.bedrijf}</p>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <span className="terminal-pill text-base-soft">{dateFormatter.format(new Date(quote.datum))}</span>
-          <span className={`terminal-pill text-xs tracking-[0.12em] ${statusClass}`}>
-            {statusLabels[quote.status] || "Concept"}
-          </span>
-        </div>
-      </header>
-
-      <dl className="mt-4 space-y-1 text-xs tracking-[0.08em] text-gridline/90">
-        <div className="flex justify-between gap-3">
-          <dt>Items</dt>
-          <dd>{quote.item_count ?? "—"}</dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt>Totaal (incl. btw)</dt>
-          <dd className="text-primary font-semibold">{formatCurrency(quote.totaal_bruto)}</dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt>Korting</dt>
-          <dd>{Number.parseFloat(quote.korting_perc ?? 0).toFixed(1)}%</dd>
-        </div>
-      </dl>
-
-      <footer className="mt-5 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          className="terminal-button is-ghost text-xs tracking-[0.12em]"
-          onClick={() => onView(quote.id)}
-        >
-          Bekijk
-        </button>
-        <button
-          type="button"
-          className="terminal-button is-ghost text-xs tracking-[0.12em]"
-          onClick={() => onEdit(quote.id)}
-        >
-          Bewerk
-        </button>
-        <button
-          type="button"
-          className="terminal-button is-ghost text-xs tracking-[0.12em]"
-          onClick={() => onDownloadPdf(quote.id)}
-        >
-          PDF
-        </button>
-        <button
-          type="button"
-          className="terminal-button is-danger text-xs tracking-[0.12em]"
-          onClick={() => onDelete(quote)}
-          disabled={isDeleting}
-        >
-          {isDeleting ? "Verwijderen…" : "Verwijder"}
-        </button>
-      </footer>
-    </article>
   );
 }
 

@@ -8,6 +8,11 @@ const DELIVERY_TYPES = {
 };
 
 function toNumber(value, fallback = 0) {
+  if (typeof value === "string" && value.includes(",")) {
+    const normalized = value.replace(",", ".");
+    const parsedNorm = Number(normalized);
+    if (Number.isFinite(parsedNorm)) return parsedNorm;
+  }
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
@@ -100,6 +105,7 @@ export default function calculateQuoteCost(printItems = [], form = {}, settings 
   if (Number.isNaN(postCostSetting) || postCostSetting < 0) {
     return { fout: "Postkost ongeldig in instellingen." };
   }
+  const useStoredTotals = Boolean(options?.useStoredTotals);
 
   for (const item of printItems) {
     const weightKg = toNumber(item.weight) / 1000;
@@ -108,6 +114,67 @@ export default function calculateQuoteCost(printItems = [], form = {}, settings 
       materialId: item.materiaal_id,
       weightKg,
     });
+
+    // Bewerkmodus: behoud eerder opgeslagen subtotalen om sprongen te vermijden
+    if (
+      useStoredTotals &&
+      ((item.subtotaal !== undefined && item.subtotaal !== null) || item.verkoopprijs_per_stuk)
+    ) {
+      const quantity = Math.max(1, toNumber(item.aantal, 1));
+      const storedSubtotalRaw = toNumber(
+        item.subtotaal !== undefined && item.subtotaal !== null ? item.subtotaal : item.verkoopprijs_per_stuk * quantity,
+        0
+      );
+      const storedSubtotal = roundCurrency(storedSubtotalRaw);
+      const storedPerPiece = roundCurrency(
+        toNumber(item.verkoopprijs_per_stuk, storedSubtotal / quantity || storedSubtotal)
+      );
+
+      // Gebruik berekende kostcomponenten enkel voor interne kost (materiaal + elektriciteit),
+      // maar houd verkoopprijzen/subtotaal volledig vast zoals opgeslagen. Geen herverdeling over design/drying etc.
+      let materialRaw = 0;
+      let electricityCost = 0;
+      try {
+        const kostCalc = calculateItemCost(item, settings, form, {
+          pricePerKg: rule?.price_per_unit,
+          marginOverride: rule?.margin_override,
+        });
+        materialRaw = toNumber(kostCalc?.quote?.per_print?.material_raw, 0);
+        electricityCost = toNumber(kostCalc?.quote?.per_print?.electricity, 0);
+      } catch (e) {
+        // stilzwijgend fallback naar 0; we willen niet crashen in editmodus
+      }
+
+      const kost = {
+        quote: {
+          per_print: {
+            material_raw: materialRaw,
+            material_with_markup: 0,
+            electricity: electricityCost,
+            cost_before_margin: storedPerPiece,
+            cost_with_margin: storedPerPiece,
+          },
+          totals: {
+            prints_total: storedSubtotal,
+            design_total: 0,
+            drying_total: 0,
+            extra_allowances: 0,
+            subtotal: storedSubtotal,
+          },
+        },
+        subtotaal: storedSubtotal.toFixed(2),
+        nettoKost: roundCurrency((materialRaw + electricityCost) * quantity).toFixed(2),
+        verkoopprijs_per_stuk: storedPerPiece.toFixed(2),
+        subtotalBeforeDelivery: storedSubtotal,
+        dryingApplied: false,
+      };
+
+      itemResultaten.push({ type: "print", item, kost });
+      aggregateTotals.prints_total += storedSubtotal;
+      subtotalBeforeDelivery += storedSubtotal;
+      totalEigenKost += roundCurrency((materialRaw + electricityCost) * quantity);
+      continue;
+    }
 
     const kost = calculateItemCost(item, settings, form, {
       pricePerKg: rule?.price_per_unit,

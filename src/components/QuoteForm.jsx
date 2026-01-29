@@ -1,8 +1,9 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import { SettingsContext } from "../context/SettingsContext";
 
 export default function QuoteForm({ onChange, initialValues, syncKey }) {
   const { settings } = useContext(SettingsContext);
+  const userChangeRef = useRef(false);
   const [form, setForm] = useState({
     offertenummer: "",
     offertedatum: new Date().toISOString().split("T")[0],
@@ -62,7 +63,8 @@ export default function QuoteForm({ onChange, initialValues, syncKey }) {
   }, [syncKey]);
 
   useEffect(() => {
-    onChange?.(form);
+    onChange?.(form, { user: userChangeRef.current });
+    userChangeRef.current = false;
   }, [form, onChange]);
 
   const handleChange = (event) => {
@@ -70,6 +72,7 @@ export default function QuoteForm({ onChange, initialValues, syncKey }) {
     const parsed =
       type === "number" ? (value === "" ? 0 : parseFloat(value) || 0) : value;
 
+    userChangeRef.current = true;
     setForm((prev) => ({
       ...prev,
       [name]: parsed,
@@ -79,6 +82,7 @@ export default function QuoteForm({ onChange, initialValues, syncKey }) {
   const handleCheckboxChange = (event) => {
     const { name, checked } = event.target;
     let updated = { ...form, [name]: checked };
+    userChangeRef.current = true;
 
     if (name === "gebruikIndividueleMarges" && checked) {
       updated.gebruikGeenMarge = false;
