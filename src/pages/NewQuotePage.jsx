@@ -1,8 +1,9 @@
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import QuoteForm from "../components/QuoteForm";
 import PrintItemList from "../components/PrintItemList";
+import CustomItemList from "../components/CustomItemList";
 import SummarySection from "../components/SummarySection";
 import calculateQuoteCost from "../lib/calculateQuoteCost";
 import { SettingsContext } from "../context/SettingsContext";
@@ -26,7 +27,22 @@ const INITIAL_ITEM = {
   modelleringNodig: false,
 };
 
+const INITIAL_CUSTOM_ITEM = {
+  title: "",
+  description: "",
+  quantity: 1,
+  unit: "stuk",
+  cost_amount: 0,
+  price_amount: 0,
+  margin_percent: 0,
+  vat_percent: 0,
+  is_optional: false,
+  is_selected: true,
+  group_ref: "",
+};
+
 const DEFAULT_FORM = {
+  offertenummer: "",
   offertedatum: new Date().toISOString().split("T")[0],
   aantalPrints: 1,
   meerderePrintbedden: false,
@@ -42,8 +58,8 @@ const DEFAULT_FORM = {
   deliveryType: "afhaling",
   materialMarkup: 20,
   korting: 0,
-  btw: 21,
-  btwVrijgesteld: false,
+  btw: 0,
+  btwVrijgesteld: true,
   btwVrijTekst: "",
 };
 
@@ -58,7 +74,9 @@ export default function NewQuotePage() {
   const [selectedClient, setSelectedClient] = useState(null);
   const [form, setForm] = useState(DEFAULT_FORM);
   const [items, setItems] = useState([INITIAL_ITEM]);
-  const [summary, setSummary] = useState(null);
+  const [customItems, setCustomItems] = useState([]);
+  const [formSyncKey, setFormSyncKey] = useState(0);
+  const [quoteMode, setQuoteMode] = useState("print"); // "print" | "manual"
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [quoteLoaded, setQuoteLoaded] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -66,6 +84,18 @@ export default function NewQuotePage() {
   const [priceRules, setPriceRules] = useState([]);
   const [priceRulesLoaded, setPriceRulesLoaded] = useState(false);
   const [quoteStatus, setQuoteStatus] = useState("draft");
+  const [validationMessages, setValidationMessages] = useState([]);
+  const [loadError, setLoadError] = useState(null);
+
+  const handleModeChange = useCallback((mode) => {
+    setQuoteMode(mode);
+    if (mode === "manual") {
+      setItems([]);
+      setCustomItems((prev) => (prev.length ? prev : [{ ...INITIAL_CUSTOM_ITEM }]));
+    } else if (mode === "print") {
+      setItems((prev) => (prev.length === 0 ? [{ ...INITIAL_ITEM }] : prev));
+    }
+  }, []);
 
   useEffect(() => {
     if (priceRulesLoaded) return;
@@ -88,10 +118,22 @@ export default function NewQuotePage() {
         vervoerskost: settings.vervoerskost ?? prev.vervoerskost,
         materialMarkup: settings.materialMarkup ?? settings.materiaalOpslagPerc ?? prev.materialMarkup,
         korting: settings.korting ?? prev.korting,
-        btw: settings.btw ?? prev.btw,
+        btw: typeof settings.btw === "number" ? settings.btw : 0,
+        btwVrijgesteld: settings.btw === 0,
+        btwVrijTekst: settings.btw === 0 ? "Vrijstelling (0%)" : prev.btwVrijTekst,
       };
     });
   }, [settings, isEditing, quoteLoaded]);
+
+  useEffect(() => {
+    if (isEditing) return;
+    const modeParam = searchParams.get("mode");
+    if (modeParam === "manual") {
+      handleModeChange("manual");
+    } else if (modeParam === "print") {
+      handleModeChange("print");
+    }
+  }, [isEditing, searchParams]);
 
   useEffect(() => {
     if (!isEditing || !editingQuoteId) {
@@ -113,7 +155,7 @@ export default function NewQuotePage() {
           throw new Error(data.error);
         }
 
-        const { offerte, items: quoteItems } = data;
+        const { offerte, items: quoteItems, custom_items: customQuoteItems } = data;
         setQuoteStatus(offerte.status || "draft");
 
         setSelectedClient(
@@ -130,19 +172,25 @@ export default function NewQuotePage() {
         const formFromQuote = {
           ...DEFAULT_FORM,
           offertedatum: offerte.datum ?? DEFAULT_FORM.offertedatum,
+          deliveryType: offerte.delivery_type || DEFAULT_FORM.deliveryType,
           globaleWinstmarge: parseFloat(offerte.standaard_winstmarge_perc ?? settings?.standaardWinstmarge ?? 0),
           gebruikGeenMarge: Boolean(offerte.gebruik_geen_marge),
           gebruikIndividueleMarges: Boolean(offerte.gebruik_item_marges),
           elektriciteitsprijs: parseFloat(offerte.elektriciteitskost_per_kwh ?? settings?.elektriciteitsprijs ?? 0),
           overrideElektriciteitsprijs: true,
           vasteStartkost: parseFloat(offerte.vaste_startkost ?? 0),
-        vervoerskost: parseFloat(offerte.vervoerskost ?? 0),
-        korting: parseFloat(offerte.korting_perc ?? settings?.korting ?? 0),
-        btw: parseFloat(offerte.btw_perc ?? settings?.btw ?? 21),
-        btwVrijgesteld: Boolean(offerte.vat_exempt),
-        btwVrijTekst: offerte.vat_exempt_reason ?? "",
-        materialMarkup: settings?.materialMarkup ?? settings?.materiaalOpslagPerc ?? DEFAULT_FORM.materialMarkup,
-      };
+          vervoerskost: parseFloat(offerte.vervoerskost ?? 0),
+          korting: parseFloat(offerte.korting_perc ?? settings?.korting ?? 0),
+          btw: parseFloat(
+            Number.isFinite(offerte.btw_perc) ? offerte.btw_perc : settings?.btw ?? DEFAULT_FORM.btw ?? 0
+          ),
+          btwVrijgesteld: Boolean(offerte.vat_exempt) || parseFloat(offerte.btw_perc ?? 0) === 0,
+          btwVrijTekst: offerte.vat_exempt_reason ?? "",
+          materialMarkup: settings?.materialMarkup ?? settings?.materiaalOpslagPerc ?? DEFAULT_FORM.materialMarkup,
+          geldigheid_dagen: parseInt(offerte.validity_days ?? DEFAULT_FORM.geldigheid_dagen, 10),
+          levertermijn: offerte.delivery_terms ?? DEFAULT_FORM.levertermijn,
+          betalingsvoorwaarden: offerte.payment_terms ?? settings?.payment_terms ?? DEFAULT_FORM.betalingsvoorwaarden,
+        };
 
         const mappedItems = (quoteItems || []).map((item) => {
           const printSeconds = Number(item.printtijd_seconden ?? 0);
@@ -184,8 +232,27 @@ export default function NewQuotePage() {
           };
         });
 
+        const mappedCustomItems = (customQuoteItems || []).map((custom) => ({
+          ...INITIAL_CUSTOM_ITEM,
+          id: custom.id,
+          title: custom.title ?? "",
+          description: custom.description ?? "",
+          quantity: Number(custom.quantity ?? 1),
+          unit: custom.unit ?? "stuk",
+          cost_amount: Number(custom.cost_amount ?? 0),
+          price_amount: Number(custom.price_amount ?? 0),
+          margin_percent: Number(custom.margin_percent ?? 0),
+          vat_percent: Number(custom.vat_percent ?? 0),
+          is_optional: Boolean(custom.is_optional),
+          is_selected: custom.is_selected === 0 ? false : true,
+          group_ref: custom.group_ref ?? "",
+        }));
+
         setForm(formFromQuote);
-        setItems(mappedItems.length ? mappedItems : [INITIAL_ITEM]);
+        setItems(mappedItems.length ? mappedItems : []);
+        setCustomItems(mappedCustomItems.length ? mappedCustomItems : []);
+        setQuoteMode(mappedItems.length > 0 ? "print" : "manual");
+        setFormSyncKey(Date.now());
         setQuoteLoaded(true);
       } catch (error) {
         console.error("Fout bij laden offerte:", error);
@@ -193,6 +260,7 @@ export default function NewQuotePage() {
           type: "error",
           message: error.message || "Offerte kon niet worden geladen.",
         });
+        setLoadError(error.message || "Offerte kon niet worden geladen.");
         navigate("/offertes");
       } finally {
         setLoadingQuote(false);
@@ -202,33 +270,41 @@ export default function NewQuotePage() {
     loadQuote();
   }, [editingQuoteId, isEditing, navigate, settings]);
 
-  useEffect(() => {
-    if (!settings) {
-      setSummary(null);
-      return;
-    }
-    const calculated = calculateQuoteCost(items, form, settings, priceRules, { clientId: selectedClient?.id });
-    setSummary(calculated);
-  }, [items, form, settings, priceRules, selectedClient]);
+  const summary = useMemo(() => {
+    if (!settings) return null;
+    return calculateQuoteCost(items, form, settings, priceRules, {
+      clientId: selectedClient?.id,
+      customItems,
+    });
+  }, [items, form, settings, priceRules, selectedClient, customItems]);
 
   if (!settings) {
     return (
       <main className="space-y-6">
         <section className="terminal-card">
-          <p className="terminal-note">Instellingen laden…</p>
+          <p className="terminal-note">Instellingen laden...</p>
         </section>
       </main>
     );
   }
 
   const handleAddItem = () => setItems((prev) => [...prev, { ...INITIAL_ITEM }]);
+  const handleAddCustomItem = () => setCustomItems((prev) => [...prev, { ...INITIAL_CUSTOM_ITEM }]);
 
   const handleUpdateItem = (index, updatedItem) => {
     setItems((prev) => prev.map((item, i) => (i === index ? updatedItem : item)));
   };
 
+  const handleUpdateCustomItem = (index, updatedItem) => {
+    setCustomItems((prev) => prev.map((item, i) => (i === index ? updatedItem : item)));
+  };
+
   const handleRemoveItem = (index) => {
     setItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveCustomItem = (index) => {
+    setCustomItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSaveQuote = async () => {
@@ -245,8 +321,17 @@ export default function NewQuotePage() {
       return;
     }
 
-    const validationErrors = validateQuoteBeforeSave({ items, summary, form, client: selectedClient });
+    const validationErrors = validateQuoteBeforeSave({
+      items,
+      customItems,
+      summary,
+      form,
+      client: selectedClient,
+      quoteMode,
+      skipPrintValidation: quoteMode === "manual",
+    });
     if (validationErrors.length > 0) {
+      setValidationMessages(validationErrors);
       showToast({
         type: "error",
         message: `Kan offerte niet opslaan:\n- ${validationErrors.join("\n- ")}`,
@@ -254,8 +339,10 @@ export default function NewQuotePage() {
       });
       return;
     }
+    setValidationMessages([]);
 
     const payloadItems = prepareItemsForPayload(items, summary);
+    const payloadCustomItems = prepareCustomItemsForPayload(customItems);
 
     if (isEditing) {
       await updateExistingQuote({
@@ -264,6 +351,7 @@ export default function NewQuotePage() {
         form,
         summary,
         items: payloadItems,
+        customItems: payloadCustomItems,
         settings,
         navigate,
         showToast,
@@ -276,6 +364,7 @@ export default function NewQuotePage() {
       client_id: selectedClient.id,
       form,
       items: payloadItems,
+      custom_items: payloadCustomItems,
       summary,
     };
 
@@ -339,94 +428,152 @@ export default function NewQuotePage() {
 
       {loadingQuote ? (
         <section className="terminal-card">
-          <p className="terminal-note">Bestande offerte laden…</p>
+          <p className="terminal-note">Bestaande offerte laden...</p>
         </section>
       ) : (
-        <>
-          <section className="terminal-card space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="terminal-section-title">Klantbeheer</p>
-                <h2 className="text-xl font-semibold tracking-dial uppercase">
-                  Selecteer klant
-                </h2>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="terminal-button is-accent text-xs tracking-[0.14em]"
-                  onClick={() => setIsClientModalOpen(true)}
-                >
-                  Nieuwe klant
-                </button>
-                <Link
-                  to="/instellingen/klanten"
-                  className="terminal-button is-ghost text-xs tracking-[0.14em]"
-                >
-                  Klanten beheren
-                </Link>
-              </div>
-            </div>
-
-            <ClientSelector
-              selectedClient={selectedClient}
-              setSelectedClient={setSelectedClient}
-              refreshKey={clientRefreshKey}
-            />
-
-            {selectedClient ? (
-              <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.12em] text-gridline/80">
-                <span className="terminal-pill">Actieve klant</span>
-                <span>
-                  {selectedClient.naam}
-                  {selectedClient.bedrijf ? ` / ${selectedClient.bedrijf}` : ""}
-                </span>
-                {(!selectedClient.street || !selectedClient.postal_code || !selectedClient.city || !selectedClient.country_code) && (
-                  <span className="terminal-pill border-signal-amber/70 text-signal-amber">
-                    Vul straat / postcode / stad / land in (nodig voor factuur/UBL)
+        <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+          <div className="space-y-6">
+            <section className="terminal-card space-y-3 bg-parchment/95">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="terminal-section-title">Workflow</p>
+                  <h2 className="text-xl font-semibold tracking-dial uppercase text-base-soft">Print & calculatie</h2>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="terminal-pill text-xs tracking-[0.12em]">
+                    {isEditing ? `Bewerken #${editingQuoteId}` : "Nieuwe offerte"}
                   </span>
+                  <span className="terminal-pill text-xs tracking-[0.12em]">{items.length} printstuk(ken)</span>
+                  <span
+                    className={`terminal-pill text-xs tracking-[0.12em] ${
+                      summary && Number(summary?.winstPerc ?? 0) <= 0
+                        ? "border-signal-red/70 text-signal-red"
+                        : "text-primary"
+                    }`}
+                  >
+                    {summary ? `Marge ${Number(summary?.winstPerc ?? 0).toFixed(1)}%` : "Nog geen marge"}
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-gridline/75">
+                Stap 1: kies klant. Stap 2: vul printstukken in. Stap 3: controleer samenvatting en sla op.
+              </p>
+            </section>
+
+            <section className="terminal-card space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="terminal-section-title">Klantbeheer</p>
+                  <h2 className="text-xl font-semibold tracking-dial uppercase">Selecteer klant</h2>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="terminal-button is-accent text-xs tracking-[0.14em]"
+                    onClick={() => setIsClientModalOpen(true)}
+                  >
+                    Nieuwe klant
+                  </button>
+                  <Link to="/instellingen/klanten" className="terminal-button is-ghost text-xs tracking-[0.14em]">
+                    Klanten beheren
+                  </Link>
+                </div>
+              </div>
+
+              <ClientSelector selectedClient={selectedClient} setSelectedClient={setSelectedClient} refreshKey={clientRefreshKey} />
+
+              {selectedClient ? (
+                <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.12em] text-gridline/80">
+                  <span className="terminal-pill">Actieve klant</span>
+                  <span>
+                    {selectedClient.naam}
+                    {selectedClient.bedrijf ? ` / ${selectedClient.bedrijf}` : ""}
+                  </span>
+                  {(!selectedClient.street || !selectedClient.postal_code || !selectedClient.city || !selectedClient.country_code) && (
+                    <span className="terminal-pill border-signal-amber/70 text-signal-amber">
+                      Vul straat / postcode / stad / land in (nodig voor factuur/UBL)
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="terminal-note">Geen klant geselecteerd.</p>
+              )}
+            </section>
+
+            <QuoteForm onChange={setForm} initialValues={form} syncKey={formSyncKey} />
+
+            {quoteMode === "print" && (
+              <PrintItemList
+                printItems={items}
+                onAddItem={handleAddItem}
+                onUpdateItem={handleUpdateItem}
+                onRemoveItem={handleRemoveItem}
+              />
+            )}
+
+            <CustomItemList
+              items={customItems}
+              onAddItem={handleAddCustomItem}
+              onUpdateItem={handleUpdateCustomItem}
+              onRemoveItem={handleRemoveCustomItem}
+            />
+          </div>
+
+          <div className="space-y-4 xl:sticky xl:top-4">
+            <SummarySection summary={summary} />
+
+            {summary && Number(summary?.totals?.total_final ?? 0) === 0 && (
+              <div className="terminal-card border border-dashed border-signal-amber/50 text-signal-amber bg-parchment/80">
+                <p className="text-sm tracking-[0.08em]">
+                  Totale offertewaarde is EUR 0.00. Controleer printtijd, gewicht of materiaalkeuze.
+                </p>
+              </div>
+            )}
+            {summary && Number(summary?.winstPerc ?? 0) <= 0 && (
+              <div className="terminal-card border border-signal-red/60 text-signal-red bg-base-highlight/10">
+                <p className="text-sm tracking-[0.08em] font-semibold">Waarschuwing: marge is negatief of nul.</p>
+                <p className="text-xs text-gridline/80">Pas prijzen of kosten aan voordat je verstuurt.</p>
+              </div>
+            )}
+            {summary && Number(summary?.winstPerc ?? 0) > 0 && Number(summary?.winstPerc ?? 0) < 5 && (
+              <div className="terminal-card border border-signal-amber/60 text-signal-amber bg-base-highlight/10">
+                <p className="text-sm tracking-[0.08em] font-semibold">Lage marge: {Number(summary.winstPerc).toFixed(1)}%</p>
+                <p className="text-xs text-gridline/80">Overweeg aanpassing voor gezonde marge.</p>
+              </div>
+            )}
+
+          <div className="terminal-card space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="terminal-section-title mb-0">Opslaan</p>
+              {!selectedClient && (
+                <span className="terminal-pill text-xs tracking-[0.12em] text-gridline/70">
+                  Selecteer klant eerst
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1 text-xs text-gridline/70">
+                <p>Controleren klaar? Sla op als concept of definitief door de offerte te openen na opslaan.</p>
+                {validationMessages.length > 0 && (
+                  <ul className="text-signal-red space-y-1">
+                    {validationMessages.map((msg, idx) => (
+                      <li key={idx}>• {msg}</li>
+                    ))}
+                  </ul>
                 )}
               </div>
-            ) : (
-              <p className="terminal-note">Geen klant geselecteerd.</p>
-            )}
-          </section>
-
-          <QuoteForm onChange={setForm} />
-
-          <PrintItemList
-            printItems={items}
-            onAddItem={handleAddItem}
-            onUpdateItem={handleUpdateItem}
-            onRemoveItem={handleRemoveItem}
-          />
-
-          <SummarySection summary={summary} />
-
-          {summary && Number(summary?.totals?.total_final ?? 0) === 0 && (
-            <div className="terminal-card border border-dashed border-signal-amber/50 text-signal-amber bg-parchment/80">
-              <p className="text-sm tracking-[0.08em]">
-                Totale offertewaarde is EUR 0.00. Controleer printtijd, gewicht of materiaalkeuze.
-              </p>
+              <button
+                type="button"
+                onClick={handleSaveQuote}
+                className="terminal-button is-accent disabled:opacity-60"
+                disabled={!selectedClient}
+                >
+                  {isEditing ? "Offerte bijwerken" : "Offerte opslaan"}
+                </button>
+              </div>
             </div>
-          )}
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-            {!selectedClient && (
-              <p className="text-xs uppercase tracking-[0.12em] text-gridline/70">
-                Selecteer eerst een klant om de offerte op te slaan.
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={handleSaveQuote}
-              className="terminal-button is-accent disabled:opacity-60"
-              disabled={!selectedClient}
-            >
-              {isEditing ? "Offerte bijwerken" : "Offerte opslaan"}
-            </button>
           </div>
-        </>
+        </div>
       )}
       <ClientAddModal
         isOpen={isClientModalOpen}
@@ -439,6 +586,8 @@ export default function NewQuotePage() {
 
 function prepareItemsForPayload(items, summary) {
   const itemSummaries = summary?.itemResultaten ?? [];
+
+  if (!Array.isArray(items) || items.length === 0) return [];
 
   return items.map((item, index) => {
     const kost = itemSummaries[index]?.kost;
@@ -474,36 +623,53 @@ function prepareItemsForPayload(items, summary) {
   });
 }
 
-function validateQuoteBeforeSave({ items, summary, form, client }) {
+function validateQuoteBeforeSave({ items, customItems, summary, form, client, quoteMode, skipPrintValidation = false }) {
   const errors = [];
 
   if (!form?.offertedatum) {
     errors.push("Offertedatum ontbreekt.");
   }
 
-  if (!Array.isArray(items) || items.length === 0) {
-    errors.push("Voeg minstens \u00e9\u00e9n printstuk toe.");
-    return errors;
+  const hasPrintItems = Array.isArray(items) && items.length > 0;
+  const hasCustomItems = Array.isArray(customItems) && customItems.length > 0;
+
+  if (!hasPrintItems && !hasCustomItems) {
+    errors.push("Voeg minstens één print- of customregel toe.");
   }
 
-  items.forEach((item, index) => {
-    const label = `Printstuk ${String(index + 1).padStart(2, "0")}`;
-    const weight = Number(item.weight ?? 0);
-    const seconds =
-      Number(item.hours ?? 0) * 3600 +
-      Number(item.minutes ?? 0) * 60 +
-      Number(item.seconds ?? 0);
+  if (!skipPrintValidation && quoteMode !== "manual" && hasPrintItems) {
+    (items || []).forEach((item, index) => {
+      const label = `Printstuk ${String(index + 1).padStart(2, "0")}`;
+      const weight = Number(item.weight ?? 0);
+      const seconds =
+        Number(item.hours ?? 0) * 3600 +
+        Number(item.minutes ?? 0) * 60 +
+        Number(item.seconds ?? 0);
 
-    if (!item.materiaal_id) {
-      errors.push(`${label}: selecteer een materiaal.`);
+      if (!item.materiaal_id) {
+        errors.push(`${label}: selecteer een materiaal.`);
+      }
+
+      if (!weight || weight <= 0) {
+        errors.push(`${label}: gewicht moet groter dan 0 gram zijn.`);
+      }
+
+      if (!seconds || seconds <= 0) {
+        errors.push(`${label}: vul de printtijd in (uren/minuten/seconden).`);
+      }
+    });
+  }
+
+  (customItems || []).forEach((custom, index) => {
+    const label = `Custom regel ${String(index + 1).padStart(2, "0")}`;
+    if (!custom.title || String(custom.title).trim() === "") {
+      errors.push(`${label}: titel ontbreekt.`);
     }
-
-    if (!weight || weight <= 0) {
-      errors.push(`${label}: gewicht moet groter dan 0 gram zijn.`);
+    if (Number(custom.price_amount ?? 0) < 0) {
+      errors.push(`${label}: verkoopprijs mag niet negatief zijn.`);
     }
-
-    if (!seconds || seconds <= 0) {
-      errors.push(`${label}: vul de printtijd in (uren/minuten/seconden).`);
+    if (Number(custom.quantity ?? 0) <= 0) {
+      errors.push(`${label}: hoeveelheid moet groter dan 0 zijn.`);
     }
   });
 
@@ -511,6 +677,15 @@ function validateQuoteBeforeSave({ items, summary, form, client }) {
     summary?.itemResultaten?.filter((entry) => entry?.kost?.fout) ?? [];
   if (faultyItems.length > 0) {
     errors.push("Lossen eerst de fouten in de kostencalculatie op.");
+  }
+
+  const totalFinal = Number(summary?.totals?.total_final ?? 0);
+  const marginPerc = Number(summary?.winstPerc ?? 0);
+  if (totalFinal <= 0) {
+    errors.push("Totale offertewaarde moet groter dan 0 zijn.");
+  }
+  if (marginPerc <= 0) {
+    errors.push("Marge is negatief of nul; controleer prijzen.");
   }
 
   if (client) {
@@ -524,7 +699,25 @@ function validateQuoteBeforeSave({ items, summary, form, client }) {
   return errors;
 }
 
-async function updateExistingQuote({ id, clientId, form, summary, items, settings, navigate, showToast, status }) {
+function prepareCustomItemsForPayload(customItems = []) {
+  if (!Array.isArray(customItems)) return [];
+
+  return customItems.map((custom) => ({
+    title: custom.title ?? "",
+    description: custom.description ?? "",
+    quantity: Number(custom.quantity ?? 1),
+    unit: custom.unit || "stuk",
+    cost_amount: Number(custom.cost_amount ?? 0),
+    price_amount: Number(custom.price_amount ?? 0),
+    margin_percent: Number(custom.margin_percent ?? 0),
+    vat_percent: Number(custom.vat_percent ?? 0),
+    is_optional: Boolean(custom.is_optional),
+    is_selected: custom.is_optional ? Boolean(custom.is_selected) : true,
+    group_ref: custom.group_ref || null,
+  }));
+}
+
+async function updateExistingQuote({ id, clientId, form, summary, items, customItems, settings, navigate, showToast, status }) {
   const totals = summary?.totals ?? {};
   const notify = typeof showToast === "function" ? showToast : () => {};
 
@@ -542,7 +735,11 @@ async function updateExistingQuote({ id, clientId, form, summary, items, setting
     elektriciteitskost_per_kwh: form.overrideElektriciteitsprijs
       ? Number(form.elektriciteitsprijs ?? 0)
       : Number(settings?.elektriciteitsprijs ?? 0),
-    totaal_netto: Number(totals.prints_total ?? 0),
+    validity_days: Number(form.geldigheid_dagen ?? 30),
+    delivery_terms: form.levertermijn ?? "",
+    payment_terms: form.betalingsvoorwaarden ?? "",
+    quote_number: form.offertenummer || form.quote_number || null,
+    totaal_netto: Number(totals.total_final ?? totals.subtotal ?? 0),
     totaal_btw: Number(totals.vat_amount ?? 0),
     totaal_bruto: Number(totals.total_including_vat ?? totals.total_final ?? 0),
     opmerkingen: "",
@@ -550,6 +747,7 @@ async function updateExistingQuote({ id, clientId, form, summary, items, setting
     vat_exempt_reason: form.btwVrijTekst ?? "",
     status: status ?? "draft",
     items,
+    custom_items: customItems,
   };
 
   try {
@@ -577,3 +775,5 @@ async function updateExistingQuote({ id, clientId, form, summary, items, setting
     });
   }
 }
+
+

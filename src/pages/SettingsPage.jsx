@@ -17,7 +17,7 @@ const COST_FIELDS = [
   {
     name: "elektriciteitsprijs",
     label: "Elektriciteitsprijs",
-    helper: "Gemiddelde kWh-kost voor productie. Per offerte overschrijfbaar.",
+    helper: "Gemiddelde kWh-kost voor productie. Per offerte overschrijfbaar. Richtwaarde: ~0,30 EUR/kWh.",
     suffix: "EUR/kWh",
     min: 0,
     step: 0.001,
@@ -42,6 +42,15 @@ const COST_FIELDS = [
     type: "number",
   },
   {
+    name: "postCost",
+    label: "Postkost (standaard)",
+    helper: "Kost voor verzending per post. Wordt gebruikt in de printcalculator. Richtwaarde: 7 EUR.",
+    suffix: "EUR",
+    min: 0,
+    step: 0.1,
+    type: "number",
+  },
+  {
     name: "modelleringTarief",
     label: "Modelleringsuurtarief",
     helper: "Uurtarief voor 3D-modellering. Gebruikt bij items met ontwerpwerk.",
@@ -52,6 +61,15 @@ const COST_FIELDS = [
     featured: true,
   },
 ];
+
+const AVG_KWH_BY_COUNTRY = {
+  BE: 0.33,
+  NL: 0.40,
+  FR: 0.32,
+  DE: 0.42,
+  LU: 0.35,
+  default: 0.30,
+};
 
 const TAX_FIELDS = [
   {
@@ -65,7 +83,7 @@ const TAX_FIELDS = [
   {
     name: "korting",
     label: "Standaard korting",
-    helper: "Automatische korting die op nieuwe offertes wordt voorgesteld.",
+    helper: "Automatische korting die op nieuwe offertes wordt voorgesteld. Laat op 0% tenzij afgesproken.",
     suffix: "%",
     min: 0,
     type: "number",
@@ -107,6 +125,7 @@ export default function SettingsPage() {
     elektriciteitsprijs: "",
     vasteStartkost: "",
     vervoerskost: "",
+    postCost: "",
     modelleringTarief: "",
     btw: "",
     korting: "",
@@ -204,6 +223,7 @@ export default function SettingsPage() {
       elektriciteitsprijs: parseFloat(formData.elektriciteitsprijs || 0),
       vasteStartkost: parseFloat(formData.vasteStartkost || 0),
       vervoerskost: parseFloat(formData.vervoerskost || 0),
+      postCost: parseFloat(formData.postCost || 0),
       modelleringTarief: parseFloat(formData.modelleringTarief || 0),
       btw: parseFloat(formData.btw || 0),
       korting: parseFloat(formData.korting || 0),
@@ -565,6 +585,7 @@ function InputField({
   step = "any",
   featured = false,
   placeholder = "",
+  action,
 }) {
   return (
     <div
@@ -591,6 +612,15 @@ function InputField({
         className="terminal-input"
         placeholder={placeholder}
       />
+        {action && (
+          <button
+            type="button"
+            className="terminal-button is-ghost text-xs whitespace-nowrap"
+            onClick={action.onClick}
+          >
+            {action.label}
+          </button>
+        )}
       </div>
       {helper && <p className="text-xs text-gridline/70">{helper}</p>}
     </div>
@@ -648,6 +678,7 @@ function extractFormValues(source) {
     elektriciteitsprijs: source.elektriciteitsprijs ?? "",
     vasteStartkost: source.vasteStartkost ?? "",
     vervoerskost: source.vervoerskost ?? "",
+    postCost: source.postCost ?? "",
     modelleringTarief: source.modelleringTarief ?? "",
     btw: source.btw ?? "",
     korting: source.korting ?? "",

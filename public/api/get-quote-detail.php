@@ -7,6 +7,7 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/invoice-utils.php';
 
 // 🧑 Simuleer ingelogde gebruiker
 $userId = 1;
@@ -21,6 +22,11 @@ if (!$id) {
 }
 
 try {
+    ensureQuoteCustomItemsTable($pdo);
+    ensureQuoteConditionColumns($pdo);
+    ensureQuoteNumberColumn($pdo);
+    ensureQuoteItemsColumns($pdo);
+
     // 1️⃣ Haal offertegegevens + klantinfo op
     $stmt = $pdo->prepare("
         SELECT 
@@ -65,10 +71,16 @@ try {
     $stmt2->execute([$id]);
     $items = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
-    // 3️⃣ Combineer
+    // 3️⃣ Custom items ophalen
+    $stmtCustom = $pdo->prepare("SELECT * FROM quote_custom_items WHERE quote_id = ?");
+    $stmtCustom->execute([$id]);
+    $customItems = $stmtCustom->fetchAll(PDO::FETCH_ASSOC);
+
+    // 4️⃣ Combineer
     echo json_encode([
         'offerte' => $offerte,
-        'items' => $items
+        'items' => $items,
+        'custom_items' => $customItems
     ], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     http_response_code(500);

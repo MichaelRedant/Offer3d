@@ -155,6 +155,84 @@ function ensureQuoteTaxColumns(PDO $pdo): void
 }
 
 /**
+ * Zorgt dat offertes conditiesvelden hebben.
+ */
+function ensureQuoteConditionColumns(PDO $pdo): void
+{
+    $columns = [
+        'validity_days' => "validity_days INT NOT NULL DEFAULT 30",
+        'delivery_terms' => "delivery_terms TEXT NULL",
+        'payment_terms' => "payment_terms TEXT NULL",
+        'delivery_type' => "delivery_type VARCHAR(32) NULL DEFAULT 'afhaling'",
+    ];
+    foreach ($columns as $column => $definition) {
+        ensureColumn($pdo, 'quotes', $column, $definition);
+    }
+}
+
+/**
+ * Zorgt dat offertes een aanpasbaar offertenummer hebben.
+ */
+function ensureQuoteNumberColumn(PDO $pdo): void
+{
+    ensureColumn($pdo, 'quotes', 'quote_number', "quote_number VARCHAR(64) NULL");
+}
+
+/**
+ * Zorgt voor tabel voor custom offerteregels (diensten/bundels) naast prints.
+ */
+function ensureQuoteCustomItemsTable(PDO $pdo): void
+{
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS quote_custom_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            quote_id INT NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            description TEXT NULL,
+            quantity DECIMAL(12,4) NOT NULL DEFAULT 1,
+            unit VARCHAR(32) NOT NULL DEFAULT 'stuk',
+            cost_amount DECIMAL(12,4) NOT NULL DEFAULT 0,
+            price_amount DECIMAL(12,4) NOT NULL DEFAULT 0,
+            margin_percent DECIMAL(6,2) NOT NULL DEFAULT 0,
+            vat_percent DECIMAL(6,2) NOT NULL DEFAULT 0,
+            is_optional TINYINT(1) NOT NULL DEFAULT 0,
+            is_selected TINYINT(1) NOT NULL DEFAULT 1,
+            group_ref VARCHAR(64) NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_quote_id (quote_id)
+        )
+    ");
+
+    $optionalColumns = [
+        'group_ref' => "group_ref VARCHAR(64) NULL",
+        'margin_percent' => "margin_percent DECIMAL(6,2) NOT NULL DEFAULT 0",
+        'vat_percent' => "vat_percent DECIMAL(6,2) NOT NULL DEFAULT 0",
+        'is_optional' => "is_optional TINYINT(1) NOT NULL DEFAULT 0",
+        'is_selected' => "is_selected TINYINT(1) NOT NULL DEFAULT 1",
+    ];
+    foreach ($optionalColumns as $column => $definition) {
+        ensureColumn($pdo, 'quote_custom_items', $column, $definition);
+    }
+}
+
+/**
+ * Zorgt dat quote_items alle vereiste kolommen bevatten (marges, modellering, levering).
+ */
+function ensureQuoteItemsColumns(PDO $pdo): void
+{
+    $columns = [
+        'custom_winstmarge_perc' => "custom_winstmarge_perc DECIMAL(10,2) NOT NULL DEFAULT 0",
+        'override_marge' => "override_marge TINYINT(1) NOT NULL DEFAULT 0",
+        'modellering_uur' => "modellering_uur DECIMAL(10,2) NOT NULL DEFAULT 0",
+        'model_link' => "model_link VARCHAR(512) NULL",
+    ];
+    foreach ($columns as $column => $definition) {
+        ensureColumn($pdo, 'quote_items', $column, $definition);
+    }
+}
+
+/**
  * Haal factuur + items + klant op.
  */
 function fetchInvoice(PDO $pdo, int $invoiceId): ?array

@@ -36,6 +36,7 @@ if (!$autoloadFound) {
     exit;
 }
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/invoice-utils.php';
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -60,6 +61,9 @@ if (!$quote) {
 }
 
 // Fetch items
+    ensureQuoteCustomItemsTable($pdo);
+    ensureQuoteNumberColumn($pdo);
+
 $itemsStmt = $pdo->prepare("
     SELECT qi.*, m.naam AS materiaal_naam, m.kleur AS materiaal_kleur, m.type AS materiaal_type
     FROM quote_items qi
@@ -68,6 +72,9 @@ $itemsStmt = $pdo->prepare("
 ");
 $itemsStmt->execute([$quoteId]);
 $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+$customStmt = $pdo->prepare("SELECT * FROM quote_custom_items WHERE quote_id = ?");
+$customStmt->execute([$quoteId]);
+$customItems = $customStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $companyName = $settings['company_name'] ?? 'Bedrijfsnaam';
 $companyAddress = $settings['company_address'] ?? '';
@@ -87,6 +94,9 @@ $companyBlock = "<strong>{$companyName}</strong><br/>" .
     ($companyEmail ? "<br/>" . htmlspecialchars($companyEmail) : "") .
     ($companyPhone ? " | " . htmlspecialchars($companyPhone) : "") .
     ($vatNumber ? "<br/>BTW: " . htmlspecialchars($vatNumber) : "");
+$validityDays = (int)($quote['validity_days'] ?? 0);
+$deliveryTerms = $quote['delivery_terms'] ?? '';
+$paymentTerms = $quote['payment_terms'] ?? ($settings['payment_terms'] ?? '');
 
 $htmlItems = '';
 foreach ($items as $index => $item) {
@@ -102,13 +112,58 @@ foreach ($items as $index => $item) {
     ";
 }
 
+$customHtml = '';
+if (!empty($customItems)) {
+    // Alleen geselecteerde of niet-optionele regels opnemen
+    $customItems = array_filter($customItems, function ($custom) {
+        $isOptional = !empty($custom['is_optional']);
+        $isSelected = $isOptional ? (!empty($custom['is_selected'])) : true;
+        return $isSelected;
+    });
+}
+
+// Bepaal modus: als er geen printitems zijn, beschouw als handmatig
+$isManualQuote = empty($items);
+
+if (!empty($customItems)) {
+    $customHtml .= "
+    <h2>" . ($isManualQuote ? "Offerte" : "Custom regels") . "</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Omschrijving</th>
+          <th style='text-align:right;'>Hoeveelheid</th>
+          <th style='text-align:right;'>Subtotaal</th>
+        </tr>
+      </thead>
+      <tbody>";
+    foreach ($customItems as $idx => $custom) {
+        $qty = number_format((float)($custom['quantity'] ?? 0), 2, ',', '.');
+        $lineTotal = number_format((float)(($custom['price_amount'] ?? 0) * ($custom['quantity'] ?? 0)), 2, ',', '.');
+        $title = htmlspecialchars($custom['title'] ?? 'Custom regel');
+        $desc = $custom['description'] ? "<div style='color:#475569; font-size:11px; margin-top:2px;'>" . nl2br(htmlspecialchars($custom['description'])) . "</div>" : "";
+        $customHtml .= "
+          <tr>
+            <td>" . ($idx + 1) . "</td>
+            <td>{$title}{$desc}</td>
+            <td style='text-align:right;'>{$qty} {$custom['unit']}</td>
+            <td style='text-align:right;'>{$lineTotal} EUR</td>
+          </tr>
+        ";
+    }
+    $customHtml .= "</tbody></table>";
+}
+
 $totaalNetto = number_format((float)($quote['totaal_netto'] ?? 0), 2, ',', '.');
 $totaalBtw = number_format((float)($quote['totaal_btw'] ?? 0), 2, ',', '.');
 $totaalBruto = number_format((float)($quote['totaal_bruto'] ?? 0), 2, ',', '.');
 $vatExempt = !empty($quote['vat_exempt']);
 $vatReason = $quote['vat_exempt_reason'] ?? '';
+$vatPerc = number_format((float)($quote['btw_perc'] ?? 0), 2, ',', '.');
 
 $logoTag = $logoUrl ? "<img src='{$logoUrl}' style='max-height:60px;' alt='Logo' />" : "";
+$quoteNumberDisplay = !empty($quote['quote_number']) ? htmlspecialchars($quote['quote_number']) : "Offerte #{$quoteId}";
 $termsBlock = '';
 if (!empty($termsText)) {
     $termsBlock = "
@@ -158,11 +213,12 @@ $html = "
     <div>{$logoTag}</div>
   </div>
 
-  <h1>Offerte</h1>
+  <h1>{$quoteNumberDisplay}</h1>
   <p><strong>Klant:</strong> " . htmlspecialchars($quote['klant_naam'] ?? 'Onbekend') . "</p>
   " . ($quote['bedrijf'] ? "<p><strong>Bedrijf:</strong> " . htmlspecialchars($quote['bedrijf']) . "</p>" : "") . "
   " . ($quote['email'] ? "<p><strong>Email:</strong> " . htmlspecialchars($quote['email']) . "</p>" : "") . "
 
+  " . ($isManualQuote ? "" : "
   <h2>Printstukken</h2>
   <table>
     <thead>
@@ -178,14 +234,26 @@ $html = "
       {$htmlItems}
     </tbody>
   </table>
+  ") . "
+
+  {$customHtml}
 
   <table class='totals'>
     <tr><td class='label'>Totaal netto</td><td class='value'>{$totaalNetto} EUR</td></tr>
-    <tr><td class='label'>BTW</td><td class='value'>{$totaalBtw} EUR</td></tr>
+    <tr><td class='label'>BTW ({$vatPerc}%)</td><td class='value'>{$totaalBtw} EUR</td></tr>
     <tr><td class='label'>Totaal incl. btw</td><td class='value'>{$totaalBruto} EUR</td></tr>
   </table>
 
-  " . ($vatExempt ? "<p class='text-sm' style='margin-top:6px;'><strong>BTW vrijgesteld:</strong> " . htmlspecialchars($vatReason ?: '0% toegepast') . "</p>" : "") . "
+  " . ($vatExempt || $quote['btw_perc'] == 0
+    ? "<p class='text-sm' style='margin-top:6px;'><strong>BTW vrijgesteld of 0%:</strong> " . htmlspecialchars($vatReason ?: '0% toegepast') . "</p>"
+    : "") . "
+
+  <div style='margin-top:14px; font-size:12px; line-height:1.5;'>
+    <h2>Condities</h2>
+    <p><strong>Geldigheid:</strong> " . ($validityDays > 0 ? "{$validityDays} dagen" : "n.v.t.") . "</p>
+    " . ($deliveryTerms ? "<p><strong>Levertermijn:</strong> " . htmlspecialchars($deliveryTerms) . "</p>" : "") . "
+    " . ($paymentTerms ? "<p><strong>Betalingsvoorwaarden:</strong> " . nl2br(htmlspecialchars($paymentTerms)) . "</p>" : "") . "
+  </div>
 
   {$termsBlock}
   {$pdfLink}

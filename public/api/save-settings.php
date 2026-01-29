@@ -19,12 +19,13 @@ if (!$input || !is_array($input)) {
     exit;
 }
 
-// Vereiste velden controleren
+// Vereiste velden controleren (enkel aanwezigheid)
 $required = [
     'standaardWinstmarge',
     'elektriciteitsprijs',
     'vasteStartkost',
     'vervoerskost',
+    'postCost',
     'modelleringTarief',
     'btw',
     'korting',
@@ -38,7 +39,7 @@ $required = [
     'termsUrl',
 ];
 foreach ($required as $field) {
-    if (!isset($input[$field]) || !is_numeric($input[$field])) {
+    if (!array_key_exists($field, $input)) {
         http_response_code(400);
         echo json_encode(['error' => "Ongeldig of ontbrekend veld: $field"]);
         exit;
@@ -57,6 +58,7 @@ $pdo->exec("
         modellerings_tarief_per_uur DECIMAL(10,2) NOT NULL DEFAULT 40.00,
         btw DECIMAL(6,2) NOT NULL DEFAULT 21.00,
         korting_perc DECIMAL(6,2) NOT NULL DEFAULT 0.00,
+        post_cost DECIMAL(10,2) NOT NULL DEFAULT 7.00,
         company_name VARCHAR(255) NULL,
         company_address TEXT NULL,
         company_email VARCHAR(255) NULL,
@@ -77,7 +79,8 @@ $addColumns = [
     "logo_url VARCHAR(512) NULL",
     "vat_number VARCHAR(64) NULL",
     "terms_text TEXT NULL",
-    "terms_url VARCHAR(512) NULL"
+    "terms_url VARCHAR(512) NULL",
+    "post_cost DECIMAL(10,2) NOT NULL DEFAULT 7.00"
 ];
 foreach ($addColumns as $colDef) {
     $colName = explode(' ', $colDef)[0];
@@ -98,6 +101,7 @@ $stmt = $pdo->prepare("
         modellerings_tarief_per_uur,
         btw,
         korting_perc,
+        post_cost,
         company_name,
         company_address,
         company_email,
@@ -115,6 +119,7 @@ $stmt = $pdo->prepare("
         :modellering,
         :btw,
         :korting,
+        :post_cost,
         :companyName,
         :companyAddress,
         :companyEmail,
@@ -134,6 +139,7 @@ $success = $stmt->execute([
     ':modellering' => (float) $input['modelleringTarief'],
     ':btw' => (float) $input['btw'],
     ':korting' => (float) $input['korting'],
+    ':post_cost' => isset($input['postCost']) ? (float)$input['postCost'] : 0,
     ':companyName' => $input['companyName'],
     ':companyAddress' => $input['companyAddress'],
     ':companyEmail' => $input['companyEmail'],

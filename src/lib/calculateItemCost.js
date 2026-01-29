@@ -100,6 +100,15 @@ export default function calculateItemCost(item = {}, settings = {}, form = {}, o
     nozzleCost + postProcessingCost + scanCost + assemblyCost + manualSurcharge;
 
   const filamentPrices = mergeFilamentPrices(settings);
+  const materialPricePerKg = toNumber(
+    item.material?.prijs_per_kg ??
+      item.materiaal_prijs ??
+      item.prijs_per_kg ??
+      item.price_per_kg
+  );
+  if (materialPricePerKg > 0 && filamentType) {
+    filamentPrices[filamentType] = materialPricePerKg;
+  }
   if (overrides?.pricePerKg && filamentType) {
     filamentPrices[filamentType] = toNumber(overrides.pricePerKg);
   }
@@ -118,6 +127,7 @@ export default function calculateItemCost(item = {}, settings = {}, form = {}, o
     profit_margin: toNumber(marginPercentage) / 100,
     material_markup: toNumber(materialMarkupPercentage) / 100,
     electricity_cost_per_kwh: kWhPrijs,
+    post_cost: toNumber(settings.postCost ?? settings.post_cost ?? 7),
     filament_prices: filamentPrices,
   };
 

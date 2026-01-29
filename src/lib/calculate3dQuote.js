@@ -58,6 +58,7 @@ export function calculate3DQuote(params = {}) {
     profit_margin = 0.25,
     material_markup = 0.2,
     electricity_cost_per_kwh = 0.12,
+    post_cost = 7,
     filament_prices,
   } = params;
 
@@ -147,7 +148,7 @@ export function calculate3DQuote(params = {}) {
       deliveryCost = 15;
       break;
     case "post":
-      deliveryCost = subtotalBeforeDelivery < 50 ? 7 : 5;
+      deliveryCost = normaliseFloat(post_cost, 7);
       break;
     case "afhaling":
     default:

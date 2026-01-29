@@ -1,5 +1,6 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import QuoteModeModal from "../components/QuoteModeModal";
 import { SettingsContext } from "../context/SettingsContext";
 import { baseUrl } from "../lib/constants";
 
@@ -20,6 +21,8 @@ export default function Home() {
   const { settings, loading: settingsLoading } = useContext(SettingsContext);
   const [overview, setOverview] = useState({ quotes: [], materials: [], clients: [] });
   const [status, setStatus] = useState({ loading: true, errors: [] });
+  const [isQuoteModeModalOpen, setIsQuoteModeModalOpen] = useState(false);
+  const navigate = useNavigate();
   const apiBase = baseUrl;
 
   useEffect(() => {
@@ -110,21 +113,39 @@ export default function Home() {
 
   const latestQuotes = useMemo(() => overview.quotes.slice(0, 4), [overview.quotes]);
 
+  const openQuoteModal = () => setIsQuoteModeModalOpen(true);
+  const closeQuoteModal = () => setIsQuoteModeModalOpen(false);
+  const goToQuoteMode = (mode) => {
+    setIsQuoteModeModalOpen(false);
+    if (mode === "manual") {
+      navigate("/offerte/handmatig");
+    } else {
+      navigate(`/offerte?mode=${mode}`);
+    }
+  };
+
   return (
     <main className="space-y-8">
-      <HeroPanel settingsLoading={settingsLoading} metrics={metrics} status={status} />
-      <QuickNavigation />
+      <HeroPanel settingsLoading={settingsLoading} metrics={metrics} status={status} onNewQuote={openQuoteModal} />
+      <QuickNavigation onNewQuote={openQuoteModal} />
       <DashboardMetrics />
       <section className="grid gap-6 lg:grid-cols-3">
         <RecentQuoteList quotes={latestQuotes} loading={status.loading} />
         <SystemChecklist settings={settings} overview={overview} className="lg:col-span-2" />
       </section>
       <ResourceGrid />
+      {isQuoteModeModalOpen && (
+        <QuoteModeModal
+          onClose={closeQuoteModal}
+          onSelectPrint={() => goToQuoteMode("print")}
+          onSelectManual={() => goToQuoteMode("manual")}
+        />
+      )}
     </main>
   );
 }
 
-function HeroPanel({ settingsLoading, metrics, status }) {
+function HeroPanel({ settingsLoading, metrics, status, onNewQuote }) {
   return (
     <section className="terminal-card space-y-6 bg-parchment/95">
       <header className="space-y-3">
@@ -137,9 +158,9 @@ function HeroPanel({ settingsLoading, metrics, status }) {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link to="/offerte" className="terminal-button is-accent">
+            <button type="button" className="terminal-button is-accent" onClick={onNewQuote}>
               Nieuwe offerte
-            </Link>
+            </button>
             <Link to="/offertes" className="terminal-button is-ghost">
               Naar overzicht
             </Link>
@@ -178,7 +199,7 @@ function HeroPanel({ settingsLoading, metrics, status }) {
   );
 }
 
-function QuickNavigation() {
+function QuickNavigation({ onNewQuote }) {
   return (
     <section className="terminal-card space-y-4 bg-parchment/95">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -189,20 +210,36 @@ function QuickNavigation() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {QUICK_LINKS.map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            className={`group rounded-card border border-gridline/50 bg-parchment/95 p-4 shadow-terminal transition duration-200 hover:-translate-y-1 hover:shadow-terminal-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${link.accent ? "border-primary/70" : ""}`}
-          >
-            <p className="text-xs tracking-[0.16em] text-primary">{link.title}</p>
-            <p className="text-lg font-semibold tracking-[0.08em] text-base-soft">{link.description}</p>
-            <span className="mt-3 inline-flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-base-soft group-hover:text-primary">
-              Open module
-              <span aria-hidden="true">⇢</span>
-            </span>
-          </Link>
-        ))}
+        {QUICK_LINKS.map((link) =>
+          link.to === "/offerte" ? (
+            <button
+              key={link.to}
+              type="button"
+              onClick={onNewQuote}
+              className={`group text-left rounded-card border border-gridline/50 bg-parchment/95 p-4 shadow-terminal transition duration-200 hover:-translate-y-1 hover:shadow-terminal-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${link.accent ? "border-primary/70" : ""}`}
+            >
+              <p className="text-xs tracking-[0.16em] text-primary">{link.title}</p>
+              <p className="text-lg font-semibold tracking-[0.08em] text-base-soft">{link.description}</p>
+              <span className="mt-3 inline-flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-base-soft group-hover:text-primary">
+                Open module
+                <span aria-hidden="true">→</span>
+              </span>
+            </button>
+          ) : (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`group rounded-card border border-gridline/50 bg-parchment/95 p-4 shadow-terminal transition duration-200 hover:-translate-y-1 hover:shadow-terminal-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${link.accent ? "border-primary/70" : ""}`}
+            >
+              <p className="text-xs tracking-[0.16em] text-primary">{link.title}</p>
+              <p className="text-lg font-semibold tracking-[0.08em] text-base-soft">{link.description}</p>
+              <span className="mt-3 inline-flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-base-soft group-hover:text-primary">
+                Open module
+                <span aria-hidden="true">→</span>
+              </span>
+            </Link>
+          )
+        )}
       </div>
     </section>
   );

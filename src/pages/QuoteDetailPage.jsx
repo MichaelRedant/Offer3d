@@ -166,6 +166,7 @@ export default function QuoteDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { settings } = useContext(SettingsContext);
+  const apiKey = import.meta.env.VITE_API_KEY;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState(null);
@@ -175,7 +176,8 @@ export default function QuoteDetailPage() {
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
 
   const handleDownloadPdf = () => {
-    const url = `${baseUrl}/generate-quote-pdf.php?id=${id}`;
+    const keyParam = apiKey ? `&api_key=${encodeURIComponent(apiKey)}` : "";
+    const url = `${baseUrl}/generate-quote-pdf.php?id=${id}${keyParam}`;
     window.open(url, "_blank");
   };
 
@@ -244,6 +246,12 @@ export default function QuoteDetailPage() {
       },
     ];
   }, [data]);
+
+  const klantAdresCompleet =
+    data?.offerte?.street && data.offerte.postal_code && data.offerte.city && data.offerte.country_code;
+  const klantAdresStatus = klantAdresCompleet
+    ? { label: "Adres compleet", tone: "success" }
+    : { label: "Adres onvolledig (straat/postcode/stad/land vereist)", tone: "error" };
 
   const handleDelete = async () => {
     const confirmed = window.confirm(`Weet je zeker dat je offerte #${id} wilt verwijderen?`);
@@ -415,6 +423,20 @@ export default function QuoteDetailPage() {
         <h2 className="text-xl font-semibold tracking-dial uppercase text-base-soft">
           Klantinformatie
         </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`terminal-pill text-xs tracking-[0.12em] ${
+              klantAdresCompleet ? "text-signal-green border-signal-green/60" : "text-signal-amber border-signal-amber/60"
+            }`}
+          >
+            {klantAdresCompleet ? "Adres compleet" : "Adres onvolledig (straat/postcode/stad/land vereist)"}
+          </span>
+          {!klantAdresCompleet && (
+            <Link to="/instellingen/klanten" className="terminal-button is-ghost text-xs tracking-[0.12em]">
+              Klant bewerken
+            </Link>
+          )}
+        </div>
         <p>
           <span className="font-semibold">Klant:</span> {offerte.klant_naam}
           {offerte.klant_bedrijf ? ` / ${offerte.klant_bedrijf}` : ""}

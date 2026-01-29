@@ -1,4 +1,6 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import QuoteModeModal from "./QuoteModeModal";
 
 const NAV_LINKS = [
   { to: "/", label: "Dashboard", exact: true },
@@ -11,7 +13,20 @@ const NAV_LINKS = [
 ];
 
 export default function Layout({ children }) {
+  const navigate = useNavigate();
   const location = useLocation();
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+
+  const openQuoteModal = () => setIsQuoteModalOpen(true);
+  const closeQuoteModal = () => setIsQuoteModalOpen(false);
+  const goToQuoteMode = (mode) => {
+    setIsQuoteModalOpen(false);
+    if (mode === "manual") {
+      navigate("/offerte/handmatig");
+    } else {
+      navigate(`/offerte?mode=${mode}`);
+    }
+  };
 
   return (
     <div className="terminal-shell">
@@ -23,22 +38,43 @@ export default function Layout({ children }) {
         </div>
 
         <nav className="terminal-topbar__nav" aria-label="Hoofdmenu">
-          {NAV_LINKS.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.exact}
-              className={({ isActive }) =>
-                `terminal-topbar__link${isActive ? " is-active" : ""}`
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
+          {NAV_LINKS.map((link) => {
+            if (link.to === "/offerte") {
+              const isActive = location.pathname.startsWith("/offerte");
+              return (
+                <button
+                  key={link.to}
+                  type="button"
+                  onClick={openQuoteModal}
+                  className={`terminal-topbar__link${isActive ? " is-active" : ""}`}
+                >
+                  {link.label}
+                </button>
+              );
+            }
+
+            return (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.exact}
+                className={({ isActive }) => `terminal-topbar__link${isActive ? " is-active" : ""}`}
+              >
+                {link.label}
+              </NavLink>
+            );
+          })}
         </nav>
       </header>
 
       <div className="terminal-page crt-fade-in">{children}</div>
+      {isQuoteModalOpen && (
+        <QuoteModeModal
+          onClose={closeQuoteModal}
+          onSelectPrint={() => goToQuoteMode("print")}
+          onSelectManual={() => goToQuoteMode("manual")}
+        />
+      )}
     </div>
   );
 }

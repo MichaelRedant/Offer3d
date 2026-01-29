@@ -61,11 +61,11 @@ function ToastViewport({ toasts, onDismiss }) {
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 top-4 z-[9999] flex justify-center px-4 sm:px-6"
+      className="pointer-events-none fixed bottom-4 right-4 z-[9999] flex justify-end px-4 sm:px-6"
       role="status"
       aria-live="polite"
     >
-      <div className="flex w-full max-w-lg flex-col gap-3">
+      <div className="flex w-full max-w-lg flex-col gap-3 items-end">
         {toasts.map((toast) => {
           const toneClass = TONE_CLASSES[toast.type] ?? TONE_CLASSES.info;
           return (

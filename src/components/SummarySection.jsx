@@ -8,6 +8,8 @@ export default function SummarySection({ summary }) {
   }
 
   const { itemResultaten = [], totals = {}, meta = {}, notes = [] } = summary;
+  const printResults = itemResultaten.filter((entry) => entry.type !== "custom");
+  const customResults = itemResultaten.filter((entry) => entry.type === "custom");
 
   return (
     <section className="terminal-card space-y-6">
@@ -16,12 +18,23 @@ export default function SummarySection({ summary }) {
         <h2 className="text-2xl font-semibold tracking-dial uppercase text-base-soft">Offerte samenvatting</h2>
       </header>
 
-      {itemResultaten.length === 0 ? (
-        <p className="terminal-note">Nog geen printitems toegevoegd.</p>
-      ) : (
+      {printResults.length === 0 && customResults.length === 0 && (
+        <p className="terminal-note">Nog geen regels toegevoegd.</p>
+      )}
+
+      {printResults.length > 0 && (
         <div className="space-y-4">
-          {itemResultaten.map(({ item, kost }, index) => (
-            <ItemSummary key={index} index={index} item={item} kost={kost} />
+          {printResults.map(({ item, kost }, index) => (
+            <ItemSummary key={`print-${index}`} index={index} item={item} kost={kost} />
+          ))}
+        </div>
+      )}
+
+      {customResults.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="terminal-section-title mt-4">Custom regels</h3>
+          {customResults.map(({ item, kost }, index) => (
+            <CustomItemSummary key={`custom-${index}`} index={index} item={item} kost={kost} />
           ))}
         </div>
       )}
@@ -113,6 +126,7 @@ function AggregateSummary({ totals, meta, summary }) {
     { label: "Ontwerpkost", value: totals.design_total },
     { label: "Droogkosten", value: totals.drying_total },
     { label: "Extra toeslagen", value: totals.extra_allowances },
+    { label: "Custom regels", value: totals.custom_total },
     { separator: true },
     {
       label: "Subtotaal vóór levering",
@@ -201,11 +215,53 @@ function AggregateSummary({ totals, meta, summary }) {
 function KeyValue({ label, value, emphasized = false }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-base-soft/90">{label}</span>
-      <span className={emphasized ? "font-semibold text-base-soft" : "text-base-soft/90"}>
+      <span className="text-ink/90">{label}</span>
+      <span className={emphasized ? "font-semibold text-ink" : "text-ink/90"}>
         {formatCurrency(value)}
       </span>
     </div>
+  );
+}
+
+function CustomItemSummary({ index, item, kost }) {
+  const subtotal = typeof kost?.subtotal === "number" ? kost.subtotal : 0;
+  const cost = typeof kost?.kost === "number" ? kost.kost : 0;
+  const marginPercent = typeof kost?.margin_percent === "number" ? kost.margin_percent : 0;
+  const included = item?.is_selected ?? item?.included ?? true;
+  const optional = item?.is_optional ?? item?.optional ?? false;
+
+  return (
+    <article className="rounded-card border border-gridline/40 bg-parchment/90 p-4 shadow-terminal">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-lg font-semibold tracking-dial uppercase text-base-soft">
+          Custom regel {String(index + 1).padStart(2, "0")}
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {optional && <span className="terminal-pill">Optioneel</span>}
+          {!included && <span className="terminal-pill border-signal-amber/70 text-signal-amber">Niet meegerekend</span>}
+        </div>
+      </div>
+      <div className="space-y-1 text-sm text-base-soft/90">
+        <p>
+          <span className="font-semibold text-base-soft">Titel:</span> {item?.title || "Geen titel"}
+        </p>
+        {item?.description && (
+          <p className="text-base-soft/80">{item.description}</p>
+        )}
+      </div>
+      <div className="grid gap-3 text-xs tracking-[0.08em] text-base-soft md:grid-cols-2 mt-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-base-soft/90">Hoeveelheid</span>
+          <span className="text-base-soft">{`${item.quantity ?? 0} ${item.unit || ""}`}</span>
+        </div>
+        <KeyValue label="Verkoop (excl. btw)" value={subtotal} emphasized />
+        <KeyValue label="Kost (intern)" value={cost} />
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-base-soft/90">Marge %</span>
+          <span className="text-base-soft">{`${marginPercent.toFixed(1)} %`}</span>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -216,8 +272,8 @@ const ACCENT_CLASS = {
 };
 
 function SummaryRow({ label, value, accent, emphasized = false }) {
-  const accentClass = accent ? ACCENT_CLASS[accent] ?? "" : "text-base-soft";
-  const emphasisClass = emphasized ? "text-lg font-semibold tracking-[0.12em] text-base-soft" : "text-base-soft";
+  const accentClass = accent ? ACCENT_CLASS[accent] ?? "text-ink" : "text-ink";
+  const emphasisClass = emphasized ? "text-lg font-semibold tracking-[0.12em] text-ink" : "text-ink";
 
   const formattedValue =
     typeof value === "number"
@@ -228,7 +284,7 @@ function SummaryRow({ label, value, accent, emphasized = false }) {
 
   return (
     <div className={`flex items-center justify-between gap-4 ${emphasisClass}`}>
-      <span className="text-base-soft/90">{label}</span>
+      <span className="text-ink/90">{label}</span>
       <span className={accentClass}>{formattedValue}</span>
     </div>
   );

@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import TerminalBackButton from "../components/TerminalBackButton";
@@ -59,6 +59,7 @@ export default function KlantenBeheer() {
   const { showToast } = useToast();
   const [viesStatus, setViesStatus] = useState(null);
   const navigate = useNavigate();
+  const formRef = useRef(null);
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
@@ -189,6 +190,12 @@ export default function KlantenBeheer() {
   const handleEdit = (client) => {
     setForm({ ...EMPTY_FORM, ...client, id: client.id ?? null });
     setIsEditing(true);
+    setViesStatus(null);
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleDelete = async (id) => {
@@ -265,7 +272,7 @@ export default function KlantenBeheer() {
         </p>
       </header>
 
-      <section className="terminal-card space-y-6">
+      <section ref={formRef} className="terminal-card space-y-6">
         <header className="space-y-1">
           <h2 className="text-xl font-semibold tracking-dial uppercase text-base-soft">
             {isEditing ? "Klant bijwerken" : "Nieuwe klant toevoegen"}

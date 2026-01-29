@@ -48,6 +48,7 @@ $required = [
     'peppolScheme',
     'defaultDueDays',
     'paymentTerms',
+    'postCost',
 ];
 foreach ($required as $key) {
     if (!array_key_exists($key, $data)) {
@@ -79,7 +80,8 @@ try {
         "peppol_endpoint_id VARCHAR(64) NULL",
         "peppol_scheme VARCHAR(16) NULL",
         "default_due_days INT NOT NULL DEFAULT 14",
-        "payment_terms TEXT NULL"
+        "payment_terms TEXT NULL",
+        "post_cost DECIMAL(10,2) NOT NULL DEFAULT 7.00"
     ];
     foreach ($addColumns as $colDef) {
         $colName = explode(' ', $colDef)[0];
@@ -114,15 +116,16 @@ try {
             company_postal_code,
             company_city,
             company_country_code,
-            peppol_endpoint_id,
-            peppol_scheme,
-            default_due_days,
-            payment_terms
-        ) VALUES (
-            1,
-            :standaardWinstmarge,
-            :elektriciteitsprijs,
-            :vasteStartkost,
+        peppol_endpoint_id,
+        peppol_scheme,
+        default_due_days,
+        payment_terms,
+        post_cost
+    ) VALUES (
+        1,
+        :standaardWinstmarge,
+        :elektriciteitsprijs,
+        :vasteStartkost,
             :vervoerskost,
             :modelleringTarief,
             :btw,
@@ -144,7 +147,8 @@ try {
             :peppolEndpointId,
             :peppolScheme,
             :defaultDueDays,
-            :paymentTerms
+            :paymentTerms,
+            :postCost
         )
         ON DUPLICATE KEY UPDATE
             standaard_winstmarge_perc = VALUES(standaard_winstmarge_perc),
@@ -171,7 +175,8 @@ try {
             peppol_endpoint_id = VALUES(peppol_endpoint_id),
             peppol_scheme = VALUES(peppol_scheme),
             default_due_days = VALUES(default_due_days),
-            payment_terms = VALUES(payment_terms)
+            payment_terms = VALUES(payment_terms),
+            post_cost = VALUES(post_cost)
     ");
 
     $stmt->execute([
@@ -200,6 +205,7 @@ try {
         ':peppolScheme' => $data['peppolScheme'],
         ':defaultDueDays' => (int)$data['defaultDueDays'],
         ':paymentTerms' => $data['paymentTerms'],
+        ':postCost' => isset($data['postCost']) ? (float)$data['postCost'] : 7.0,
     ]);
 
     echo json_encode(['success' => true]);

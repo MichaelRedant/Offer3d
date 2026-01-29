@@ -59,9 +59,12 @@ export default function PrintItemList({
             className="rounded-card border border-gridline/60 bg-base-highlight/15 p-5 shadow-terminal-inset space-y-5"
           >
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <h3 className="text-lg font-semibold tracking-dial uppercase">
-                Printstuk {String(index + 1).padStart(2, "0")}
-              </h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-lg font-semibold tracking-dial uppercase">
+                  Printstuk {String(index + 1).padStart(2, "0")}
+                </h3>
+                <ItemStatus item={item} />
+              </div>
               <button
                 type="button"
                 onClick={() => onRemoveItem(index)}
@@ -338,5 +341,25 @@ function Field({
         onChange={(event) => onChange?.(event.target.value)}
       />
     </label>
+  );
+}
+
+function ItemStatus({ item }) {
+  const issues = [];
+  if (!item.materiaal_id) issues.push("materiaal ontbreekt");
+  if (!item.weight || item.weight <= 0) issues.push("gewicht ontbreekt");
+  const seconds =
+    Number(item.hours || 0) * 3600 +
+    Number(item.minutes || 0) * 60 +
+    Number(item.seconds || 0);
+  if (!seconds || seconds <= 0) issues.push("printtijd ontbreekt");
+
+  if (issues.length === 0) {
+    return <span className="terminal-pill text-xs tracking-[0.12em] text-signal-green border-signal-green/60">Compleet</span>;
+  }
+  return (
+    <span className="terminal-pill text-xs tracking-[0.12em] text-signal-amber border-signal-amber/60">
+      {issues[0]}
+    </span>
   );
 }

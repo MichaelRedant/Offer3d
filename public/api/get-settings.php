@@ -41,14 +41,15 @@ try {
             bic VARCHAR(32) NULL,
             company_street VARCHAR(255) NULL,
             company_postal_code VARCHAR(32) NULL,
-            company_city VARCHAR(128) NULL,
-            company_country_code VARCHAR(4) NULL DEFAULT 'BE',
-            peppol_endpoint_id VARCHAR(64) NULL,
-            peppol_scheme VARCHAR(16) NULL,
-            default_due_days INT NOT NULL DEFAULT 14,
-            payment_terms TEXT NULL
-        )
-    ");
+        company_city VARCHAR(128) NULL,
+        company_country_code VARCHAR(4) NULL DEFAULT 'BE',
+        peppol_endpoint_id VARCHAR(64) NULL,
+        peppol_scheme VARCHAR(16) NULL,
+        default_due_days INT NOT NULL DEFAULT 14,
+        payment_terms TEXT NULL,
+        post_cost DECIMAL(10,2) NOT NULL DEFAULT 7.00
+    )
+");
 
     $addColumns = [
         "modellerings_tarief_per_uur DECIMAL(10,2) NOT NULL DEFAULT 40.00",
@@ -69,7 +70,8 @@ try {
         "peppol_endpoint_id VARCHAR(64) NULL",
         "peppol_scheme VARCHAR(16) NULL",
         "default_due_days INT NOT NULL DEFAULT 14",
-        "payment_terms TEXT NULL"
+        "payment_terms TEXT NULL",
+        "post_cost DECIMAL(10,2) NOT NULL DEFAULT 7.00"
     ];
     foreach ($addColumns as $colDef) {
         $colName = explode(' ', $colDef)[0];
@@ -113,6 +115,7 @@ try {
             'peppolScheme'          => $row['peppol_scheme'] ?? '',
             'defaultDueDays'        => isset($row['default_due_days']) ? (int) $row['default_due_days'] : 14,
             'paymentTerms'          => $row['payment_terms'] ?? '',
+            'postCost'              => isset($row['post_cost']) ? (float)$row['post_cost'] : 7.0,
         ], JSON_UNESCAPED_UNICODE);
     } else {
         $defaults = [
@@ -141,6 +144,7 @@ try {
             'peppolScheme'        => '',
             'defaultDueDays'      => 14,
             'paymentTerms'        => '',
+            'postCost'            => 7.0,
         ];
 
         $pdo->prepare("

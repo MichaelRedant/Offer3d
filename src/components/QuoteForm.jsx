@@ -1,9 +1,10 @@
 import { useState, useEffect, useContext } from "react";
 import { SettingsContext } from "../context/SettingsContext";
 
-export default function QuoteForm({ onChange }) {
+export default function QuoteForm({ onChange, initialValues, syncKey }) {
   const { settings } = useContext(SettingsContext);
   const [form, setForm] = useState({
+    offertenummer: "",
     offertedatum: new Date().toISOString().split("T")[0],
     aantalPrints: 1,
     meerderePrintbedden: false,
@@ -19,15 +20,19 @@ export default function QuoteForm({ onChange }) {
     deliveryType: "afhaling",
     materialMarkup: 20,
     korting: 0,
-    btw: 21,
-    btwVrijgesteld: false,
+    btw: 0,
+    btwVrijgesteld: true,
     btwVrijTekst: "",
+    geldigheid_dagen: 30,
+    levertermijn: "",
+    betalingsvoorwaarden: "",
   });
 
   useEffect(() => {
     if (settings) {
       setForm((prev) => ({
         ...prev,
+        offertenummer: prev.offertenummer,
         globaleWinstmarge: settings.standaardWinstmarge,
         elektriciteitsprijs: settings.elektriciteitsprijs,
         vasteStartkost: settings.vasteStartkost,
@@ -37,12 +42,24 @@ export default function QuoteForm({ onChange }) {
         materialMarkup:
           settings.materialMarkup ?? settings.materiaalOpslagPerc ?? prev.materialMarkup,
         korting: settings.korting,
-        btw: settings.btw,
-        btwVrijgesteld: false,
-        btwVrijTekst: "",
+        btw: typeof settings.btw === "number" ? settings.btw : 0,
+        btwVrijgesteld: (typeof settings.btw === "number" ? settings.btw : 0) === 0,
+        btwVrijTekst: (typeof settings.btw === "number" ? settings.btw : 0) === 0 ? "Vrijstelling (0%)" : "",
+        geldigheid_dagen: settings.defaultValidityDays ?? prev.geldigheid_dagen ?? 30,
+        levertermijn: settings.defaultDeliveryTerms ?? prev.levertermijn ?? "",
+        betalingsvoorwaarden: settings.payment_terms ?? settings.defaultPaymentTerms ?? prev.betalingsvoorwaarden ?? "",
       }));
     }
   }, [settings]);
+
+  useEffect(() => {
+    if (!initialValues) return;
+    setForm((prev) => ({
+      ...prev,
+      ...initialValues,
+    }));
+    // We only resync when syncKey changes to avoid resetting while typing
+  }, [syncKey]);
 
   useEffect(() => {
     onChange?.(form);
@@ -99,6 +116,13 @@ export default function QuoteForm({ onChange }) {
 
       <div className="grid gap-6">
         <Fieldset title="Basis">
+          <Input
+            label="Offertenummer (optioneel)"
+            name="offertenummer"
+            value={form.offertenummer}
+            onChange={handleChange}
+            placeholder="Bijv. OFF-2025-001"
+          />
           <Input
             label="Offertedatum"
             type="date"
@@ -282,6 +306,34 @@ export default function QuoteForm({ onChange }) {
               placeholder="Bijv. vrijgesteld art. 44 WBTW"
             />
           )}
+        </Fieldset>
+
+        <Fieldset title="Condities">
+          <Input
+            label="Geldigheid (dagen)"
+            type="number"
+            name="geldigheid_dagen"
+            value={form.geldigheid_dagen}
+            min={1}
+            onChange={handleChange}
+          />
+          <Input
+            label="Levertermijn"
+            type="text"
+            name="levertermijn"
+            value={form.levertermijn}
+            onChange={handleChange}
+            placeholder="Bijv. 5-7 werkdagen"
+          />
+          <Input
+            label="Betalingsvoorwaarden"
+            type="text"
+            name="betalingsvoorwaarden"
+            value={form.betalingsvoorwaarden}
+            onChange={handleChange}
+            placeholder="Bijv. 14 dagen na factuur"
+            wrapperClassName="md:col-span-2"
+          />
         </Fieldset>
       </div>
     </section>

@@ -23,6 +23,7 @@ export default function QuotesPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [deletingId, setDeletingId] = useState(null);
+  const apiKey = import.meta.env.VITE_API_KEY;
 
   useEffect(() => {
     async function fetchQuotes() {
@@ -100,7 +101,8 @@ export default function QuotesPage() {
   const handleView = (id) => navigate(`/offertes/${id}`);
   const handleEdit = (id) => navigate(`/offerte?edit=${id}`);
   const handleDownloadPdf = (id) => {
-    window.open(`${baseUrl}/generate-quote-pdf.php?id=${id}`, "_blank");
+    const keyParam = apiKey ? `&api_key=${encodeURIComponent(apiKey)}` : "";
+    window.open(`${baseUrl}/generate-quote-pdf.php?id=${id}${keyParam}`, "_blank");
   };
 
   return (
