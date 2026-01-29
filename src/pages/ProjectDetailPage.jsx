@@ -32,6 +32,7 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [projectForm, setProjectForm] = useState({
     naam: "",
     status: "intake",
@@ -156,11 +157,16 @@ export default function ProjectDetailPage() {
   }, [loading, data, deadlineOverdue, deadlineDueSoon, progressOverrun, showToast]);
 
   const handleSave = async (projectId) => {
+    const trimmedName = `${projectForm.naam || ""}`.trim();
+    if (!trimmedName) {
+      showToast({ type: "error", message: "Projectnaam mag niet leeg zijn." });
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
         id: Number(projectId),
-        naam: projectForm.naam,
+        naam: trimmedName,
         status: projectForm.status,
         prioriteit: projectForm.prioriteit,
         deadline: projectForm.deadline || null,
@@ -197,6 +203,28 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (deleting) return;
+    const confirmed = window.confirm("Weet je zeker dat je dit project definitief wilt verwijderen?");
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`${baseUrl}/delete-project.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: Number(id) }),
+      });
+      const json = await res.json();
+      if (!res.ok || json?.error) throw new Error(json?.error || "Verwijderen mislukt.");
+      showToast({ type: "success", message: "Project verwijderd." });
+      navigate("/projecten");
+    } catch (e) {
+      showToast({ type: "error", message: e.message || "Kon project niet verwijderen." });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <main className="space-y-6">
@@ -228,11 +256,22 @@ export default function ProjectDetailPage() {
     <main className="space-y-8">
       <header className="terminal-card space-y-4 crt-scan">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
+          <div className="space-y-2">
             <p className="terminal-section-title">Project #{project.id.toString().padStart(4, "0")}</p>
-            <h1 className="text-3xl font-semibold tracking-dial uppercase text-base-soft">{project.naam}</h1>
+            <div className="space-y-2 max-w-2xl">
+              <label className="terminal-label" htmlFor="projectNameInput">
+                Projectnaam
+              </label>
+              <input
+                id="projectNameInput"
+                className="terminal-input text-2xl font-semibold tracking-dial uppercase"
+                type="text"
+                value={projectForm.naam}
+                onChange={(e) => setProjectForm((p) => ({ ...p, naam: e.target.value }))}
+              />
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 justify-end">
             <TerminalBackButton label="Terug naar projecten" to="/projecten" />
             <TerminalBackButton label="Terug naar dashboard" to="/" />
             {project.deadline && (
@@ -465,6 +504,14 @@ export default function ProjectDetailPage() {
           <p>Wijzigingen opslaan naar project en synchroniseer materialen/taken.</p>
         </div>
         <div className="flex gap-2">
+          <button
+            type="button"
+            className="terminal-button is-danger text-xs"
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            {deleting ? "Verwijderen..." : "Verwijder project"}
+          </button>
           <TerminalBackButton to="/projecten" label="Annuleer" />
           <button
             type="button"

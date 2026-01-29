@@ -20,11 +20,13 @@ import NewInvoicePage from "./pages/NewInvoicePage";
 import ProjectsPage from "./pages/ProjectsPage";
 import NewProjectPage from "./pages/NewProjectPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
+import PWAUpdater from "./components/PWAUpdater";
 
 export default function App() {
   return (
     <SettingsProvider>
       <ToastProvider>
+        <PWAUpdater />
         <BrowserRouter basename="/offr3d">
           <Layout>
             <Routes>

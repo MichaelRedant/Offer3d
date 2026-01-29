@@ -257,3 +257,34 @@ a:hover {
     transform: translateY(0);
   }
 }
+
+/* Mobile tuning */
+@media (max-width: 640px) {
+  .terminal-shell {
+    padding: 16px 10px 32px;
+  }
+  .terminal-topbar {
+    padding: 12px;
+    gap: 12px;
+  }
+  .terminal-topbar__brand {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .terminal-topbar__nav {
+    width: 100%;
+  }
+  .terminal-topbar__link {
+    flex: 1 1 48%;
+    justify-content: center;
+    text-align: center;
+  }
+  .terminal-page {
+    padding: 0 0 32px;
+  }
+  table th,
+  table td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}

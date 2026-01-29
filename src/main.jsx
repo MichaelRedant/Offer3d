@@ -27,7 +27,7 @@ createRoot(document.getElementById('root')).render(
 );
 
 // Zorg dat oude service workers (die caching veroorzaken) niet actief blijven in dev
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+if (import.meta.env.DEV && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then((regs) => {
     regs.forEach((reg) => reg.unregister().catch(() => {}));
   });

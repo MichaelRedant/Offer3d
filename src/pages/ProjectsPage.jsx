@@ -138,7 +138,7 @@ export default function ProjectsPage() {
             <p className="terminal-section-title">Projecten</p>
             <h1 className="text-3xl font-semibold tracking-dial uppercase text-base-soft">Projectbeheer</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 justify-end">
             <button
               type="button"
               className="terminal-button is-accent text-xs tracking-[0.14em]"
