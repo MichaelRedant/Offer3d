@@ -8,11 +8,14 @@ const EMPTY_FORM = {
   naam: "",
   type: "",
   kleur: "",
+  locatie: "",
   prijs_per_kg: "",
   moet_drogen: false,
   supportmateriaal: false,
   manufacturer_id: "",
   stock_rollen: 0,
+  min_stock_gram: "",
+  min_stock_rollen: "",
   winstmarge_perc: 0,
   batch_code: "",
   vervaldatum: "",
@@ -32,6 +35,10 @@ const EMPTY_SPOOL = {
   gewicht_rest_gram: "",
   batch_code: "",
   aankoop_datum: "",
+  dried_at: "",
+  dry_valid_until: "",
+  purchase_price_eur: "",
+  overhead_eur: "",
   notities: "",
 };
 
@@ -69,6 +76,9 @@ export default function MaterialManager() {
   const [isEditingSpool, setIsEditingSpool] = useState(false);
   const [showSpoolModal, setShowSpoolModal] = useState(false);
   const [savingSpool, setSavingSpool] = useState(false);
+  const [usageForm, setUsageForm] = useState({ spool_id: null, quantity_grams: "", note: "" });
+  const [showUsageModal, setShowUsageModal] = useState(false);
+  const [usageSpool, setUsageSpool] = useState(null);
 
   useEffect(() => {
     fetchMaterials();
@@ -137,10 +147,12 @@ export default function MaterialManager() {
     const total = materials.length;
     const drying = materials.filter((material) => material.moet_drogen).length;
     const lowStock = materials.filter((material) => {
+      const thresholdRolls = material.min_stock_rollen ?? 1;
+      const thresholdGram = material.min_stock_gram ?? 250;
       if (material.voorraad_gram_rest !== null && material.voorraad_gram_rest !== undefined) {
-        return Number(material.voorraad_gram_rest) <= 250;
+        return Number(material.voorraad_gram_rest) <= thresholdGram;
       }
-      return Number(material.stock_rollen ?? 0) <= 1;
+      return Number(material.stock_rollen ?? 0) <= thresholdRolls;
     }).length;
     const avgMargin =
       total === 0
@@ -169,14 +181,16 @@ export default function MaterialManager() {
         if (spool.status === "reserve") acc.reserve += 1;
         if (spool.status === "empty") acc.empty += 1;
         const rest = spool.gewicht_rest_gram ?? spool.gewicht_netto_gram ?? 0;
-        if (rest > 0 && rest <= 250) acc.low += 1;
+        const mat = materialById[spool.material_id] || {};
+        const threshold = mat.min_stock_gram ?? 250;
+        if (rest > 0 && rest <= threshold) acc.low += 1;
         return acc;
       },
       { open: 0, sealed: 0, reserve: 0, empty: 0, low: 0 }
     );
 
     return { total, restKg: restGram / 1000, ...counts };
-  }, [spools]);
+  }, [spools, materialById]);
 
   const spoolStatCards = [
     { label: "Rollen in voorraad", value: spoolStats.total, description: "Actief geteld in beheer" },
@@ -254,11 +268,14 @@ export default function MaterialManager() {
       naam: material.naam ?? "",
       type: material.type ?? "",
       kleur: material.kleur ?? "",
+      locatie: material.locatie ?? "",
       prijs_per_kg: material.prijs_per_kg ?? "",
       moet_drogen: Boolean(material.moet_drogen),
       supportmateriaal: Boolean(material.supportmateriaal),
       manufacturer_id: material.manufacturer_id ?? "",
       stock_rollen: material.stock_rollen ?? 0,
+      min_stock_gram: material.min_stock_gram ?? "",
+      min_stock_rollen: material.min_stock_rollen ?? "",
       winstmarge_perc: material.winstmarge_perc ?? 0,
       batch_code: material.batch_code ?? "",
       vervaldatum: material.vervaldatum ?? "",
@@ -301,6 +318,8 @@ export default function MaterialManager() {
       prijs_per_kg: Number(form.prijs_per_kg) || 0,
       winstmarge_perc: Number(form.winstmarge_perc) || 0,
       stock_rollen: Number(form.stock_rollen) || 0,
+      min_stock_gram: form.min_stock_gram === "" ? null : Number(form.min_stock_gram),
+      min_stock_rollen: form.min_stock_rollen === "" ? null : Number(form.min_stock_rollen),
       manufacturer_id: form.manufacturer_id || null,
       bestel_url: form.bestel_url?.trim() || "",
     };
@@ -397,6 +416,16 @@ export default function MaterialManager() {
     setShowSpoolModal(true);
   };
 
+  const handleSpoolUsage = (spool) => {
+    setUsageSpool(spool);
+    setUsageForm({
+      spool_id: spool.id,
+      quantity_grams: "",
+      note: "",
+    });
+    setShowUsageModal(true);
+  };
+
   const handleSpoolDelete = async (id) => {
     if (!confirm("Weet je zeker dat je deze rol wilt verwijderen?")) return;
     try {
@@ -419,6 +448,39 @@ export default function MaterialManager() {
     }
   };
 
+  const handleSpoolUsageSubmit = async (event) => {
+    event.preventDefault();
+    if (!usageForm.spool_id) return;
+    const grams = Number(usageForm.quantity_grams) || 0;
+    if (grams <= 0) {
+      showFeedback("Geef een verbruik in gram op.", "error");
+      return;
+    }
+    try {
+      const response = await fetch(`${baseUrl}/log-spool-usage.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spool_id: usageForm.spool_id,
+          quantity_grams: grams,
+          note: usageForm.note?.trim() || null,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || result.error || result.success === false) {
+        throw new Error(result.error || "Verbruik loggen mislukt");
+      }
+      showFeedback("Verbruik gelogd en voorraad bijgewerkt.", "success");
+      setShowUsageModal(false);
+      setUsageSpool(null);
+      setUsageForm({ spool_id: null, quantity_grams: "", note: "" });
+      fetchSpools();
+    } catch (error) {
+      console.error("Fout bij verbruik loggen:", error);
+      showFeedback(error.message, "error");
+    }
+  };
+
   const handleSpoolSave = async (event) => {
     event.preventDefault();
     setSavingSpool(true);
@@ -432,6 +494,8 @@ export default function MaterialManager() {
         spoolForm.gewicht_rest_gram === "" || spoolForm.gewicht_rest_gram === null
           ? ""
           : Number(spoolForm.gewicht_rest_gram) || 0,
+      purchase_price_eur: spoolForm.purchase_price_eur === "" ? null : Number(spoolForm.purchase_price_eur),
+      overhead_eur: spoolForm.overhead_eur === "" ? null : Number(spoolForm.overhead_eur),
     };
 
     try {
@@ -701,19 +765,35 @@ export default function MaterialManager() {
           ))}
         </div>
 
+        {spoolStats.low > 0 && (
+          <div className="rounded-card border border-signal-amber/60 bg-signal-amber/10 p-3 text-sm text-base-soft flex items-center justify-between">
+            <span className="terminal-label">Waarschuwing voorraad</span>
+            <p>{spoolStats.low} rol(len) zitten onder de ingestelde minimum resthoeveelheid.</p>
+          </div>
+        )}
+
         {filteredSpools.length === 0 ? (
           <p className="terminal-note">Geen rollen beschikbaar.</p>
         ) : (
           <div className="terminal-grid md:grid-cols-2 xl:grid-cols-3">
-            {filteredSpools.map((spool) => (
-              <SpoolCard
-                key={spool.id}
-                spool={spool}
-                material={materialById[spool.material_id]}
-                onEdit={() => handleSpoolEdit(spool)}
-                onDelete={() => handleSpoolDelete(spool.id)}
-              />
-            ))}
+            {filteredSpools.map((spool) => {
+              const rest = spool.gewicht_rest_gram ?? spool.gewicht_netto_gram ?? 0;
+              const mat = materialById[spool.material_id];
+              const threshold = mat?.min_stock_gram ?? 250;
+              const isLow = rest > 0 && rest <= threshold;
+              return (
+                <SpoolCard
+                  key={spool.id}
+                  spool={spool}
+                  material={mat}
+                  isLow={isLow}
+                  lowThreshold={threshold}
+                  onEdit={() => handleSpoolEdit(spool)}
+                  onDelete={() => handleSpoolDelete(spool.id)}
+                  onLogUsage={() => handleSpoolUsage(spool)}
+                />
+              );
+            })}
           </div>
         )}
       </section>
@@ -748,6 +828,19 @@ export default function MaterialManager() {
         onClose={handleSpoolReset}
         onChange={handleSpoolChange}
         onSubmit={handleSpoolSave}
+      />
+
+      <UsageModal
+        open={showUsageModal}
+        spool={usageSpool}
+        form={usageForm}
+        onClose={() => {
+          setShowUsageModal(false);
+          setUsageSpool(null);
+          setUsageForm({ spool_id: null, quantity_grams: "", note: "" });
+        }}
+        onChange={(field, value) => setUsageForm((prev) => ({ ...prev, [field]: value }))}
+        onSubmit={handleSpoolUsageSubmit}
       />
     </section>
   );
@@ -790,6 +883,7 @@ function MaterialModal({ open, isEditing, form, manufacturers, onClose, onChange
             <InputField label="Naam" name="naam" value={form.naam} onChange={onChange} required />
             <InputField label="Type filament" name="type" value={form.type} onChange={onChange} placeholder="PLA, PETG, TPU..." />
             <ColorField label="Kleur" name="kleur" value={form.kleur} onChange={onChange} onColorChange={onColorChange} />
+            <InputField label="Locatie (rek/plank)" name="locatie" value={form.locatie} onChange={onChange} placeholder="Rek A - plank 3" />
             <InputField
               label="Prijs per kilogram (EUR)"
               name="prijs_per_kg"
@@ -837,6 +931,24 @@ function MaterialModal({ open, isEditing, form, manufacturers, onClose, onChange
               min="0"
               value={form.stock_rollen}
               onChange={onChange}
+            />
+            <InputField
+              label="Minimum voorraad (rollen)"
+              name="min_stock_rollen"
+              type="number"
+              min="0"
+              value={form.min_stock_rollen}
+              onChange={onChange}
+              placeholder="Bijv. 1"
+            />
+            <InputField
+              label="Minimum restgewicht (g)"
+              name="min_stock_gram"
+              type="number"
+              min="0"
+              value={form.min_stock_gram}
+              onChange={onChange}
+              placeholder="Bijv. 250"
             />
             <InputField
               label="Winstmarge %"
@@ -988,6 +1100,35 @@ function SpoolModal({ open, form, isEditing, saving, materials, onClose, onChang
             />
             <InputField label="Batch / lot" name="batch_code" value={form.batch_code} onChange={onChange} />
             <InputField label="Aankoopdatum" name="aankoop_datum" type="date" value={form.aankoop_datum} onChange={onChange} />
+            <InputField label="Gedroogd op" name="dried_at" type="date" value={form.dried_at} onChange={onChange} />
+            <InputField
+              label="Droog geldig tot"
+              name="dry_valid_until"
+              type="date"
+              value={form.dry_valid_until}
+              onChange={onChange}
+              placeholder="Bijv. 7 dagen na drogen"
+            />
+            <InputField
+              label="Aankoopprijs (EUR)"
+              name="purchase_price_eur"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.purchase_price_eur}
+              onChange={onChange}
+              placeholder="Totale aankoopprijs van de rol"
+            />
+            <InputField
+              label="Overhead (EUR)"
+              name="overhead_eur"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.overhead_eur}
+              onChange={onChange}
+              placeholder="Verzend/douane/overig"
+            />
           </div>
           <div className="space-y-2">
             <label className="terminal-label">Notities</label>
@@ -1013,11 +1154,15 @@ function SpoolModal({ open, form, isEditing, saving, materials, onClose, onChang
     </div>
   );
 }
-function SpoolCard({ spool, material, onEdit, onDelete }) {
+function SpoolCard({ spool, material, onEdit, onDelete, onLogUsage, isLow = false, lowThreshold = 0 }) {
   const tone = getStatusTone(spool.status);
   const name = spool.material_name || material?.naam || "Onbekend materiaal";
   const type = spool.material_type || material?.type || "Type onbekend";
   const kleur = spool.material_kleur || material?.kleur || "#d1d5db";
+  const rest = spool.gewicht_rest_gram ?? spool.gewicht_netto_gram ?? 0;
+  const costPerKg = spool.cost_per_kg ?? (spool.purchase_price_eur && spool.gewicht_netto_gram > 0
+    ? (Number(spool.purchase_price_eur) + Number(spool.overhead_eur || 0)) / (spool.gewicht_netto_gram / 1000)
+    : null);
   return (
     <article className={`terminal-panel space-y-3 border ${tone.border} shadow-lg`}>
       <div className="flex items-start justify-between gap-2">
@@ -1032,21 +1177,44 @@ function SpoolCard({ spool, material, onEdit, onDelete }) {
             {spool.label || "Rol"}
           </p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-[0.16em] ${tone.badge}`}>
-          {spool.status}
-        </span>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-[0.16em] ${tone.badge}`}>
+            {spool.status}
+          </span>
+          {isLow && (
+            <span className="terminal-pill text-[11px] border-signal-amber/70 text-signal-amber">
+              Laag: ≤ {lowThreshold} g
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs text-gridline/80">
         <p>Locatie: {spool.locatie || "-"}</p>
-        <p>Gewicht: {formatWeight(spool.gewicht_rest_gram ?? spool.gewicht_netto_gram)}</p>
+        <p>Gewicht: {formatWeight(rest)}</p>
         <p>Batch: {spool.batch_code || "-"}</p>
         <p>Fabrikant: {spool.manufacturer || "-"}</p>
+        {material?.moet_drogen ? <p className="text-signal-amber">Droging vereist</p> : <p />}
+        {spool.dry_valid_until ? (
+          isOverdue(spool.dry_valid_until, new Date().toISOString()) ? (
+            <p className="text-signal-red">Droog verlopen</p>
+          ) : (
+            <p className="text-signal-green">Droog tot: {spool.dry_valid_until}</p>
+          )
+        ) : material?.moet_drogen ? (
+          <p className="text-signal-amber">Nog niet gedroogd</p>
+        ) : (
+          <p />
+        )}
+        {costPerKg ? <p>Kost €/kg: {costPerKg.toFixed(2)}</p> : <p />}
       </div>
 
       <div className="flex flex-wrap gap-2">
         <button className="terminal-button is-ghost text-xs" onClick={onEdit}>
           Wijzig
+        </button>
+        <button className="terminal-button is-ghost text-xs" onClick={onLogUsage}>
+          Log verbruik
         </button>
         <button className="terminal-button is-danger text-xs" onClick={onDelete}>
           Verwijder
@@ -1085,6 +1253,12 @@ function formatWeight(gram) {
   if (Number.isNaN(value)) return "n.v.t.";
   if (value >= 1000) return `${(value / 1000).toFixed(2)} kg`;
   return `${value} g`;
+}
+function isOverdue(dateStr, nowIso) {
+  if (!dateStr) return false;
+  const ts = new Date(nowIso || new Date().toISOString());
+  const dl = new Date(dateStr);
+  return ts > dl;
 }
 
 function ColorField({ label, name, value, onChange, onColorChange }) {
@@ -1138,6 +1312,56 @@ function InputField({ label, name, className = "", ...inputProps }) {
         {label}
       </label>
       <input id={name} name={name} className="terminal-input" {...inputProps} />
+    </div>
+  );
+}
+
+function UsageModal({ open, spool, form, onClose, onChange, onSubmit }) {
+  if (!open || !spool) return null;
+  const rest = spool.gewicht_rest_gram ?? spool.gewicht_netto_gram ?? 0;
+  return (
+    <div className="terminal-modal">
+      <div className="terminal-modal__dialog w-full max-w-lg">
+        <header className="terminal-modal__header">
+          <div>
+            <p className="terminal-section-title">Verbruik loggen</p>
+            <h3 className="text-2xl font-semibold uppercase tracking-dial">Rol #{spool.id}</h3>
+            <p className="terminal-note">Rest: {formatWeight(rest)}</p>
+          </div>
+          <button className="terminal-button is-ghost" onClick={onClose}>
+            Sluiten
+          </button>
+        </header>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <InputField
+            label="Verbruik (g)"
+            name="quantity_grams"
+            type="number"
+            min="0"
+            step="0.1"
+            value={form.quantity_grams}
+            onChange={(e) => onChange("quantity_grams", e.target.value)}
+            placeholder="Bijv. 120"
+          />
+          <div className="space-y-2">
+            <label className="terminal-label">Notitie (optioneel)</label>
+            <textarea
+              className="terminal-input min-h-[96px]"
+              value={form.note}
+              onChange={(e) => onChange("note", e.target.value)}
+              placeholder="Bijv. gebruikt voor Project X"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" className="terminal-button is-ghost" onClick={onClose}>
+              Annuleren
+            </button>
+            <button type="submit" className="terminal-button is-accent">
+              Log verbruik
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

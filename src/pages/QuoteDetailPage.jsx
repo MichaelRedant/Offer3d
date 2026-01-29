@@ -174,11 +174,17 @@ export default function QuoteDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [events, setEvents] = useState([]);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [projectLinkLoading, setProjectLinkLoading] = useState(false);
 
   const handleDownloadPdf = () => {
     const keyParam = apiKey ? `&api_key=${encodeURIComponent(apiKey)}` : "";
     const url = `${baseUrl}/generate-quote-pdf.php?id=${id}${keyParam}`;
     window.open(url, "_blank");
+  };
+
+  const handleCreateProject = () => {
+    setProjectLinkLoading(true);
+    navigate(`/projecten/nieuw?quote=${id}`);
   };
 
   async function fetchEvents(quoteId) {
@@ -354,6 +360,14 @@ export default function QuoteDetailPage() {
               onClick={() => setIsInvoiceModalOpen(true)}
             >
               Maak factuur
+            </button>
+            <button
+              type="button"
+              className="terminal-button is-accent text-xs tracking-[0.12em]"
+              onClick={handleCreateProject}
+              disabled={projectLinkLoading}
+            >
+              {projectLinkLoading ? "Openen..." : "Zet om naar project"}
             </button>
             <button
               type="button"

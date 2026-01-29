@@ -107,3 +107,34 @@
 - [ ] **Stretch**
   - [ ] Dynamische prijs-suggesties (historische win-rate/marge).
   - [ ] AI-tekstvoorstellen voor intro/condities; upsell-opties; consistentiecheck op marges/regels.
+
+- [ ] **Materiaalbeheer verdieping**
+  - [ ] Voorraad & locaties (FE/BE): stock per spool + locatie (rek/plank); minimum-stock drempel + alerts; bulk-import/export CSV.
+  - [ ] Inkoop & leveranciers (BE): suppliers tabel, aankoopprijs/leverdatum/lot/keuringsstatus per spool; API + UI voor nieuwe levering registreren; prijs-geschiedenis per materiaal.
+  - [ ] Verbruik registreren (FE): bij print/offerte/project automatisch verbruik loggen; manuele correctie; restgewicht realtime tonen; waarschuwing bij tekort vóór je offert/calculeert.
+  - [ ] Droog- en houdbaarheidsstatus: hygrometer/droogstatus per spool (droog nodig/gedroogd op datum); waarschuwing als droogtijd verlopen is; toggle “droog nodig” in project en offerte.
+  - [ ] Waste/scrap tracking: register scrap (gram + reden) per spool; rapportage waste% per materiaal; export.
+  - [ ] Materiaalvarianten: hardheid/glow/CF/brandvertragend; eigen velden voor dichtheid, temp-range, support % default; defaults automatisch in offerte calculatie.
+  - [ ] Kostensynchronisatie: aankoopprijs + overhead (import/douane/verzend) omrekenen naar kost €/g; marge-opslag in settings; herberekening bij nieuwe batch.
+  - [ ] Integratie met projecten/offertes: direct vanuit project detail spool wisselen/reserveren; in offerte-editor een “reserveer spool” knop met check op stock en waarschuwing.
+  - [ ] Notificaties: toast/mail bij stock < minimum, bij aankomende expiratiedata, en bij nieuwe levering (voor team).
+  - [ ] Rapportage: dashboardkaart “voorraadwaarde”, “kritische stock”, “waste laatste 30d”, “top 5 verbruikte materialen”.
+
+- [ ] **Projectbeheer module (nieuw)**
+  - [ ] Datamodel (BE): tabel `projects` (id, naam, klant_id, quote_id?, status [intake/planning/productie/postprocessing/klaar/geleverd], prioriteit, deadline, locatie, tags, notities, created/updated); tabel `project_materials` (project_id, material_id/spool_id, hoeveelheid_gram, notities); tabel `project_tasks` (project_id, titel, status, owner?, due).
+  - [ ] API endpoints (BE): get-projects (filter op status/klant), get-project-detail (inclusief materialen/taken en gelinkte offerte/klant), create/update/delete-project, add/remove material usage, add/update tasks. Auth gelijk aan andere API’s.
+  - [ ] Navigatie (FE): nieuwe header-button “Projecten” naar /projecten; tabeloverzicht (kolommen: project, klant, offerte #, status, deadline, prioriteit); sorteer/filter op status/klant/zoek.
+  - [ ] Project detail (FE): pagina /projecten/:id met tabs Overzicht (status, klant, offerte-link, notes), Materialen (gebruik/benodigd, link naar filamentbeheer), Taken (checklist), Locatie/track (tekstveld), Event-log (wijzigingen).
+  - [ ] Koppeling offerte (FE/BE): vanuit QuoteDetailPage knop “Zet om naar project” (maakt project met quote_id + klant); in ProjectDetail link terug naar offerte.
+  - [ ] Nieuwe project wizard (FE): “Nieuw project” -> kies klant (of later), optioneel bestaande offerte kiezen, basisvelden invullen, status= intake.
+  - [ ] Styling: dezelfde neo-retro terminal-look, maar tabelweergave (zoals /offertes) + detailkaarten; duidelijke status-pillars en deadline/highlight.
+  - [ ] Status/voortgang: percent complete, resterende tijd vs. deadline, kleurcodes; historie van statuswissels.
+  - [ ] Materiaalbeheer verdieping: tonen resterend gewicht van spools, waarschuwing bij tekort, link naar spooldetail/vervanging.
+  - [ ] Taken verdieping: subtaken/checklist, drag-and-drop sortering, snelle “markeer klaar”-knop, filter op open/busy/done.
+  - [ ] Activiteitenlog: timeline met wie/wat/wanneer (status/materiaal/taak wijzigingen).
+  - [ ] Bijlagen/links: upload of URLs per project (CAD, slicerprofielen, foto’s).
+  - [ ] Planning: eenvoudige kalender/Gantt voor deadlines; ICS-export voor deadlines.
+  - [ ] Koppeling offerte/factuur: toon status gekoppelde offerte/factuur; “genereer factuur” vanuit project.
+  - [ ] Risico/notities: blok voor blockers/risico’s + “volgende actie” pill.
+  - [ ] Labels/filters: tags per project met filter/sortering (prioriteit/deadline).
+  - [ ] Snelle acties: dupliceer project, “opslaan + ga naar materiaalbeheer”, “start postprocessing” met status update.

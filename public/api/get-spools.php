@@ -56,6 +56,12 @@ try {
             'gewicht_rest_gram' => isset($row['gewicht_rest_gram']) ? (int) $row['gewicht_rest_gram'] : null,
             'batch_code' => $row['batch_code'] ?? null,
             'aankoop_datum' => $row['aankoop_datum'] ?? null,
+            'dried_at' => $row['dried_at'] ?? null,
+            'dry_valid_until' => $row['dry_valid_until'] ?? null,
+            'purchase_price_eur' => isset($row['purchase_price_eur']) ? (float)$row['purchase_price_eur'] : null,
+            'overhead_eur' => isset($row['overhead_eur']) ? (float)$row['overhead_eur'] : null,
+            'cost_per_kg' => calculateCostPerKg($row),
+            'cost_per_gram' => calculateCostPerGram($row),
             'notities' => $row['notities'] ?? null,
             'material_name' => $row['material_name'] ?? null,
             'material_type' => $row['material_type'] ?? null,
@@ -68,4 +74,27 @@ try {
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Fout bij ophalen rolvoorraad: ' . $e->getMessage()]);
+}
+
+function calculateCostPerKg(array $row)
+{
+    $base = null;
+    if (isset($row['purchase_price_eur'])) {
+        $base = (float)$row['purchase_price_eur'];
+        if (isset($row['overhead_eur'])) {
+            $base += (float)$row['overhead_eur'];
+        }
+    }
+    $net = isset($row['gewicht_netto_gram']) ? (float)$row['gewicht_netto_gram'] : 0;
+    if ($base !== null && $net > 0) {
+        return round(($base / ($net / 1000)), 4);
+    }
+    return null;
+}
+
+function calculateCostPerGram(array $row)
+{
+    $costKg = calculateCostPerKg($row);
+    if ($costKg === null) return null;
+    return round($costKg / 1000, 6);
 }

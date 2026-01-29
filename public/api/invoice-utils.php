@@ -171,6 +171,156 @@ function ensureQuoteConditionColumns(PDO $pdo): void
 }
 
 /**
+ * Projectbeheer tabellen (projecten, materialen, taken).
+ */
+function ensureProjectTables(PDO $pdo): void
+{
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS projects (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            client_id INT NULL,
+            quote_id INT NULL,
+            naam VARCHAR(255) NOT NULL,
+            status VARCHAR(32) NOT NULL DEFAULT 'intake',
+            prioriteit VARCHAR(16) NOT NULL DEFAULT 'normaal',
+            deadline DATE NULL,
+            locatie VARCHAR(255) NULL,
+            tags TEXT NULL,
+            notities TEXT NULL,
+            progress_percent DECIMAL(5,2) NOT NULL DEFAULT 0,
+            status_history TEXT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_client_id (client_id),
+            INDEX idx_quote_id (quote_id),
+            INDEX idx_status (status)
+        )
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS project_materials (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            project_id INT NOT NULL,
+            material_id INT NULL,
+            spool_id INT NULL,
+            quantity_grams DECIMAL(12,3) NOT NULL DEFAULT 0,
+            notes TEXT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_project_id (project_id)
+        )
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS project_tasks (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            project_id INT NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            status VARCHAR(32) NOT NULL DEFAULT 'open',
+            owner VARCHAR(128) NULL,
+            due_date DATE NULL,
+            notes TEXT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_project_id (project_id),
+            INDEX idx_status (status)
+        )
+    ");
+
+    // Extra kolommen voor project_tasks
+    ensureColumn($pdo, 'project_tasks', 'sort_order', "sort_order INT NOT NULL DEFAULT 0");
+}
+
+/**
+ * Subtaken bij taken (project_tasks).
+ */
+function ensureProjectSubtasksTable(PDO $pdo): void
+{
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS project_task_subtasks (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            task_id INT NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            status VARCHAR(32) NOT NULL DEFAULT 'open',
+            sort_order INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_task_id (task_id),
+            INDEX idx_status (status)
+        )
+    ");
+}
+
+/**
+ * Bijlagen/links per project.
+ */
+function ensureProjectAttachmentsTable(PDO $pdo): void
+{
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS project_attachments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            project_id INT NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            url TEXT NOT NULL,
+            attachment_type VARCHAR(32) NULL DEFAULT 'link',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_project_id (project_id)
+        )
+    ");
+}
+
+/**
+ * Zorgt voor tabel met projectactiviteiten (log).
+ */
+function ensureProjectActivityTable(PDO $pdo): void
+{
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS project_activity (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            project_id INT NOT NULL,
+            user_id INT NULL,
+            type VARCHAR(50) NOT NULL,
+            message TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_project_id (project_id),
+            INDEX idx_type (type)
+        )
+    ");
+}
+
+function logProjectActivity(PDO $pdo, int $projectId, ?int $userId, string $type, string $message): void
+{
+    $stmt = $pdo->prepare("INSERT INTO project_activity (project_id, user_id, type, message) VALUES (:pid, :uid, :type, :msg)");
+    $stmt->execute([
+        ':pid' => $projectId,
+        ':uid' => $userId,
+        ':type' => $type,
+        ':msg' => $message,
+    ]);
+}
+
+/**
+ * Zorgt voor tabel om verbruik op spools te loggen.
+ */
+function ensureSpoolUsageTable(PDO $pdo): void
+{
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS material_spool_usage (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            spool_id INT NOT NULL,
+            project_id INT NULL,
+            quote_id INT NULL,
+            quantity_grams DECIMAL(12,3) NOT NULL DEFAULT 0,
+            note TEXT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_spool_id (spool_id),
+            INDEX idx_project_id (project_id),
+            INDEX idx_quote_id (quote_id)
+        )
+    ");
+}
+
+/**
  * Zorgt dat offertes een aanpasbaar offertenummer hebben.
  */
 function ensureQuoteNumberColumn(PDO $pdo): void

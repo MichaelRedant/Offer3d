@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { to: "/offerte", label: "Nieuwe Offerte" },
   { to: "/offertes", label: "Offertes" },
   { to: "/facturen", label: "Facturen" },
+  { to: "/projecten", label: "Projecten" },
   { to: "/materialen", label: "Filamentbeheer" },
   { to: "/instellingen/klanten", label: "Klanten" },
   { to: "/instellingen", label: "Instellingen" },
